@@ -10,6 +10,7 @@
     "Kháng chú (phòng thủ trước đòn chú lực) = 0.5×WIS + 0.25×INT.",
     "Rank E–SSS ánh xạ sang cấp chú thuật sư: E Cấp 4 · D Cấp 3 · C Cấp 2 · B Bán cấp 1 · A Cấp 1 · S Đặc cấp · SS Đặc cấp siêu việt · SSS Thiên thượng.",
     "Class = Thuật thức. Mỗi thuật thức có 4 bậc tiến hóa và ít nhất một nhánh ẩn.",
+    "Đặc tính cá nhân nhân hệ số lên chỉ số sau khi cộng thẳng (cơ bản + trang bị + khế ước), rồi làm tròn xuống. Hai đặc tính cùng tăng một chỉ số thì nhân với nhau.",
     "Hệ thống cho phép Shen vừa mang Thiên dữ chú phược vừa dùng thuật thức — điều mà người thường không thể có. Mỗi khế ước có cái giá cố định.",
     "Đòn đánh tay không dùng Tấn công vật lý, trừ Giáp. Đòn chú lực dùng Uy lực chú lực, trừ Kháng chú.",
     "Thứ tự sát thương: Tấn công × Hệ số → trừ phòng thủ (tối thiểu 1) → chí mạng ×1.5 → yếu/kháng → làm tròn xuống.",
@@ -17,17 +18,35 @@
     "Chú lực hồi 2 điểm, Thể lực hồi 5 điểm mỗi lượt chiến đấu (có thể đổi bởi đặc tính).",
   ];
 
-  /* ---------- ĐẶC TÍNH CÁ NHÂN (chọn 2) ---------- */
+  /* ---------- ĐẶC TÍNH CÁ NHÂN (chọn 2 trong 20) ----------
+     mult: hệ số nhân lên chỉ số hiệu dụng — càng lên cấp, đặc tính càng mạnh.
+     note: hiệu ứng đặc biệt ngoài chỉ số (đã được engine xử lý qua mods hoặc id). */
+  const T = (name, group, mult, mods, note) => ({ name, group, mult, mods: mods || {}, note: note || "" });
   const TRAITS = {
-    thephach: { name: "Thể Phách Cuồng Bạo", stats: { STR: 3, VIT: 2 }, mods: { dmgPhys: 1.1 }, desc: "STR +3, VIT +2. Sát thương vật lý ×1.10." },
-    thanphap: { name: "Thân Pháp Ảnh", stats: { AGI: 3, LUK: 2 }, mods: { evaBonus: 0.05 }, desc: "AGI +3, LUK +2. Né tránh +5%." },
-    tamnhan: { name: "Tâm Nhãn", stats: { WIS: 3, INT: 1 }, mods: {}, desc: "WIS +3, INT +1. Quan sát được đầy đủ chỉ số kẻ địch cao hơn tới 2 Rank (mặc định 1)." },
-    chienthuat: { name: "Bộ Óc Chiến Thuật", stats: { INT: 3, WIS: 2 }, mods: { dmgCurse: 1.1 }, desc: "INT +3, WIS +2. Sát thương chú lực ×1.10." },
-    chuluc: { name: "Dòng Chú Lực Dồi Dào", stats: {}, mods: { ceMult: 1.2, ceRegen: 2 }, desc: "Chú lực tối đa ×1.20. Hồi thêm 2 chú lực mỗi lượt (tổng 4)." },
-    ychi: { name: "Ý Chí Bất Khuất", stats: { VIT: 2 }, mods: {}, desc: "VIT +2. Khi HP dưới 25%, sát thương ×1.20. Mỗi trận một lần, trụ lại với 1 HP thay vì gục." },
-    hocnhanh: { name: "Kẻ Học Nhanh", stats: { INT: 1 }, mods: { expMult: 1.15 }, desc: "INT +1. EXP nhận được ×1.15." },
-    saomay: { name: "Sao May Mắn", stats: { LUK: 5 }, mods: { critBonus: 0.03 }, desc: "LUK +5. Tỷ lệ chí mạng +3%." },
+    thephach:   T("Thể Phách Cuồng Bạo", "Cận chiến", { STR: 1.25, VIT: 1.1 }, { dmgPhys: 1.1 }, "Sát thương vật lý ×1.10."),
+    vosu:       T("Thiên Phú Võ Học", "Cận chiến", { STR: 1.15, AGI: 1.15 }),
+    satthu:     T("Bản Năng Sát Thủ", "Cận chiến", { STR: 1.1, AGI: 1.1 }, { critBonus: 0.05 }, "Chí mạng +5%."),
+    phanxa:     T("Phản Xạ Thú Hoang", "Cận chiến", { AGI: 1.15, STR: 1.1 }, { critBonus: 0.02 }, "Chí mạng +2%."),
+    thanphap:   T("Thân Pháp Ảnh", "Nhanh nhẹn", { AGI: 1.25, LUK: 1.1 }, { evaBonus: 0.05 }, "Né tránh +5%."),
+    bongma:     T("Bước Chân Bóng Ma", "Nhanh nhẹn", { AGI: 1.2, WIS: 1.1 }, { evaBonus: 0.04 }, "Né tránh +4%."),
+    dadong:     T("Da Đồng Xương Sắt", "Bền bỉ", { VIT: 1.3, STR: 1.05 }),
+    ychi:       T("Ý Chí Bất Khuất", "Bền bỉ", { VIT: 1.2 }, {}, "HP dưới 25%: sát thương ×1.20. Mỗi trận một lần trụ lại với 1 HP."),
+    hoiphuc:    T("Thể Chất Hồi Phục", "Bền bỉ", { VIT: 1.15 }, { hpMult: 1.1, staRegen: 5 }, "HP tối đa ×1.10, hồi thêm 5 Thể lực mỗi lượt."),
+    songsot:    T("Kẻ Sống Sót", "Bền bỉ", { VIT: 1.1, LUK: 1.2 }, { evaBonus: 0.03 }, "Né tránh +3%."),
+    tamnhan:    T("Tâm Nhãn", "Chú lực", { WIS: 1.25, INT: 1.1 }, {}, "Quan sát được đầy đủ chỉ số kẻ địch cao hơn tới 2 Rank (mặc định 1)."),
+    chienthuat: T("Bộ Óc Chiến Thuật", "Chú lực", { INT: 1.25, WIS: 1.1 }, { dmgCurse: 1.1 }, "Sát thương chú lực ×1.10."),
+    chuluc:     T("Dòng Chú Lực Dồi Dào", "Chú lực", { WIS: 1.05 }, { ceMult: 1.2, ceRegen: 2 }, "Chú lực tối đa ×1.20, hồi thêm 2 Chú lực mỗi lượt."),
+    dacquanh:   T("Chú Lực Đặc Quánh", "Chú lực", { WIS: 1.1 }, { dmgCurse: 1.15 }, "Sát thương chú lực ×1.15."),
+    huyetmach:  T("Huyết Mạch Chú Thuật Sư", "Chú lực", { INT: 1.15, WIS: 1.15 }),
+    tritue:     T("Tâm Trí Sắc Bén", "Chú lực", { INT: 1.2, LUK: 1.1 }),
+    timthep:    T("Trái Tim Thép", "Tinh thần", { WIS: 1.15, VIT: 1.1 }),
+    hocnhanh:   T("Kẻ Học Nhanh", "Tinh thần", { INT: 1.1 }, { expMult: 1.15 }, "EXP nhận được ×1.15."),
+    saomay:     T("Sao May Mắn", "Vận mệnh", { LUK: 1.4 }, { critBonus: 0.03 }, "Chí mạng +3%."),
+    conghuong:  T("Cộng Hưởng Hệ Thống", "Vận mệnh", { STR: 1.05, AGI: 1.05, VIT: 1.05, INT: 1.05, WIS: 1.05, LUK: 1.05 }, { expMult: 1.05 }, "EXP nhận được ×1.05."),
   };
+  Object.values(TRAITS).forEach((t) => {
+    t.desc = Object.entries(t.mult).map(([k, v]) => k + " ×" + v).join(", ") + "." + (t.note ? " " + t.note : "");
+  });
 
   /* ---------- THIÊN DỮ CHÚ PHƯỢC (khế ước Hệ thống) ---------- */
   const RESTRICTIONS = {

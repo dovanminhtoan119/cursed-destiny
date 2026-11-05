@@ -92,9 +92,24 @@
     if (s.restriction) { const r = D().RESTRICTIONS[s.restriction]; if (r && r.stats) add("Thiên dữ: " + r.name, r.stats); }
     for (const slot in s.equipment) { const it = D().ITEMS[s.equipment[slot]]; if (it && it.stats) add("Trang bị: " + it.name, it.stats); }
     const tier = CD.moralTier(s.moral); if (tier.bonus) add("Thiện–Ác: " + tier.name, tier.bonus);
+    // Đặc tính cá nhân: nhân hệ số SAU khi cộng thẳng, làm tròn xuống (World Rule)
+    const mult = CD.traitMults(s);
+    CD.STATS.forEach((k) => {
+      if (mult[k] !== 1) {
+        const before = out[k]; out[k] = Math.floor(before * mult[k]);
+        breakdown[k].push({ src: "Hệ số đặc tính ×" + +mult[k].toFixed(3), v: out[k] - before, mult: mult[k] });
+      }
+    });
     if (extraBuffs) add("Hiệu ứng tạm thời", extraBuffs);
     CD.STATS.forEach((k) => (out[k] = Math.max(0, out[k])));
     return { stats: out, breakdown };
+  };
+
+  /* Hệ số chỉ số từ đặc tính (nhân với nhau nếu nhiều đặc tính cùng tăng một chỉ số) */
+  CD.traitMults = function (s) {
+    const m = { STR: 1, AGI: 1, VIT: 1, INT: 1, WIS: 1, LUK: 1 };
+    (s.traits || []).forEach((id) => { const t = D().TRAITS[id]; if (t && t.mult) for (const k in t.mult) m[k] *= t.mult[k]; });
+    return m;
   };
 
   /* hệ số từ đặc tính / Thiên dữ (ghi trong World Rules) */

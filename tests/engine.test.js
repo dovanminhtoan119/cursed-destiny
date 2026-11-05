@@ -24,13 +24,16 @@ eq("sát thương chí mạng", CD.calcDamage(20, 2, 10, { crit: true }), 45);
 /* ---- Đặc tính, Thiên dữ, trang bị ---- */
 { const s = CD.newCampaign(); ok("chọn 2 đặc tính", CD.pickTraits(s, ["thephach", "chuluc"]));
   eq("không chọn lại", CD.pickTraits(s, ["saomay", "ychi"]), false);
-  eq("STR sau đặc tính", CD.effective(s).stats.STR, 8);
+  eq("STR sau đặc tính (5 × 1.25)", CD.effective(s).stats.STR, 6);
+  s.base.STR = 20; eq("hệ số tăng theo cấp (20 × 1.25)", CD.effective(s).stats.STR, 25); s.base.STR = 5;
   eq("Chú lực ×1.2", CD.derived(s).maxCE, Math.floor(120 * 1.2));
   CD.setRestriction(s, "xacthit"); eq("Thiên dữ giảm chú lực", CD.derived(s).maxCE, Math.floor(120 * 1.2 * 0.7));
   eq("không ký khế ước 2 lần", CD.setRestriction(s, "tamthan"), false);
   CD.applyEff(s, { item: "bang_tay" }); eq("tự mặc trang bị", s.equipment["Găng tay"], "bang_tay");
   CD.applyEff(s, { item: "dongphuc" }); CD.applyEff(s, { item: "dongphuc" });
   eq("vật phẩm độc nhất không nhân bản", s.inventory.filter((x) => x.id === "dongphuc").length + (s.equipment["Giáp"] === "dongphuc" ? 1 : 0), 1); }
+{ const s = CD.newCampaign(); CD.pickTraits(s, ["thephach", "vosu"]); eq("hai hệ số nhân nhau (5 × 1.25 × 1.15)", CD.effective(s).stats.STR, Math.floor(5 * 1.25 * 1.15)); }
+eq("đủ 20 đặc tính", Object.keys(CD.DATA.TRAITS).length, 20);
 { const s = CD.newCampaign(); CD.applyEff(s, { exp: 500 }, "tx1"); CD.applyEff(s, { exp: 500 }, "tx1"); eq("chống nhận thưởng lặp", s.level, 3); }
 
 /* ---- Rank không tự động ---- */
@@ -69,7 +72,7 @@ function playthrough(seed, prefer) {
   let id = "p_intro", steps = 0; CD.enterScene(s, id);
   while (steps++ < 300) {
     const sc = S[id];
-    if (sc.special === "traits") { const keys = Object.keys(CD.DATA.TRAITS); const a = keys[seed % 8], b = keys[(seed + 3) % 8]; CD.pickTraits(s, [a, b]); id = sc.go; }
+    if (sc.special === "traits") { const keys = Object.keys(CD.DATA.TRAITS); const a = keys[seed % 20], b = keys[(seed * 7 + 3) % 20 === seed % 20 ? (seed + 1) % 20 : (seed * 7 + 3) % 20]; CD.pickTraits(s, [a, b]); id = sc.go; }
     else if (sc.special === "interview") { CD.DATA.INTERVIEW.forEach((q, i) => CD.answerInterview(s, i, Math.floor(rng() * q.a.length))); id = sc.go; }
     else if (sc.special === "technique") { const opts = CD.suggestTechniques(s, 3); eq("3 gợi ý", opts.length, 3); CD.setTechnique(s, opts[0]); log.tech = opts; id = sc.go; }
     else if (sc.special === "restriction") { const keys = [null, "xacthit", "tamthan", "menhdoi"]; CD.setRestriction(s, keys[seed % 4]); id = sc.go; }

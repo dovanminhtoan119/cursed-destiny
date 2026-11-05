@@ -39,12 +39,12 @@
     const n = D.NPCS[id]; if (!n) return "";
     const gap = CD.powerGap(S, n);
     const hidden = n.hide;
-    return `<div class="npc ${gap.cls}">
+    return `<div class="npc ${gap.cls}"><div class="fwrap"><div class="cpt sm">${CD.ART.portrait(id)}</div><div class="fbody">
       <div class="npc-h"><strong>${esc(n.name)}</strong>${rankChip(hidden ? "???" : n.rank)}</div>
       <div class="npc-m">${hidden ? "Lv ???" : "Lv " + n.lv + " · " + (CD.RANK_INFO[n.rank] || {}).grade}</div>
       <div class="gap">${gap.label}</div>
       ${compact ? "" : `<div class="npc-d">${esc(n.desc || "")}</div>`}
-    </div>`;
+    </div></div></div>`;
   }
   function skillDesc(id, extra) {
     const k = D.SKILLS[id]; if (!k) return "";
@@ -67,7 +67,10 @@
   /* ---------- TAB: TRUYỆN ---------- */
   function storyView() {
     const sc = SC[S.scene];
-    let h = `<article class="scene"><p class="chap">${esc(sc.chapter)}</p><h2>${esc(sc.title)}</h2><div class="text">${sc.text.map(line).join("")}</div></article>`;
+    const env = CD.ART.env(S.scene), cast = combat ? [] : CD.ART.cast(S.scene);
+    let h = `<div class="stage t-${env.t}">${CD.ART.backdrop(S.scene)}<span class="tchip">${CD.ART.TIME_LABEL[env.t]} · ${esc(S.time.label)}</span>
+      ${cast.length ? `<div class="cast">${cast.map((id) => `<figure class="pt ${id.startsWith("c_") ? "curse" : ""}">${CD.ART.portrait(id)}<figcaption>${esc(id === "shen" ? "Shen" : (D.NPCS[id] || {}).name || id)}</figcaption></figure>`).join("")}</div>` : ""}</div>`;
+    h += `<article class="scene"><p class="chap">${esc(sc.chapter)}</p><h2>${esc(sc.title)}</h2><div class="text">${sc.text.map(line).join("")}</div></article>`;
     if (msgs.length) h += `<div class="msgs">${msgs.map((m) => `<div>${esc(m)}</div>`).join("")}</div>`;
     if (sc.observe && !combat) h += `<div class="obs"><p class="label">Quan sát</p><div class="npcs">${sc.observe.map((n) => npcCard(n)).join("")}</div></div>`;
     if (combat) h += combatView(sc);
@@ -82,8 +85,8 @@
   function specialView(sc) {
     if (sc.special === "traits") {
       if (S.traits.length) return contBtn(sc.go);
-      return `<div class="panel"><p class="label">Chọn 2 đặc tính (${pick.length}/2)</p><div class="cards">${Object.entries(D.TRAITS).map(([id, t]) =>
-        `<button class="card ${pick.includes(id) ? "on" : ""}" data-trait="${id}"><strong>${esc(t.name)}</strong><span>${esc(t.desc)}</span></button>`).join("")}</div>
+      return `<div class="panel"><p class="label">Chọn 2 đặc tính (${pick.length}/2)</p><p class="muted">Đặc tính nhân hệ số lên chỉ số, nên càng lên cấp càng mạnh. Ví dụ STR 40 với ×1.25 thành 50.</p><div class="cards">${Object.entries(D.TRAITS).map(([id, t]) =>
+        `<button class="card ${pick.includes(id) ? "on" : ""}" data-trait="${id}"><em class="grp">${esc(t.group)}</em><strong>${esc(t.name)}</strong><span>${esc(t.desc)}</span></button>`).join("")}</div>
         <button class="primary" data-confirm-traits ${pick.length === 2 ? "" : "disabled"}>Xác nhận đặc tính</button></div>`;
     }
     if (sc.special === "interview") {
@@ -122,15 +125,15 @@
     let h = `<div class="combat"><div class="round">Lượt ${c.round}</div>`;
     h += c.enemies.map((e, i) => {
       const ob = c.observed.includes(e.id) ? CD.combat.observe(S, c, e) : null;
-      return `<div class="foe ${e.hp <= 0 ? "dead" : ""}">
+      return `<div class="foe ${e.hp <= 0 ? "dead" : ""}"><div class="fwrap"><div class="cpt">${CD.ART.portrait(e.id)}</div><div class="fbody">
         <div class="foe-h"><strong>${esc(e.name)}</strong>${rankChip(e.rank)}<span class="muted">Lv ${e.lv}</span></div>
         ${bar(e.hp, e.d.maxHP, "hp")}
         ${e.marks ? `<div class="muted">Ấn: ${e.marks}/3</div>` : ""}
         ${ob ? `<div class="gap ${ob.gap.cls}">${ob.gap.label}</div>` + (ob.full ? `<div class="mini">${CD.STATS.map((k) => k + " " + e.stats[k]).join(" · ")}<br>Tấn công ${CD.fmt(e.d.patk)} · Uy lực ${CD.fmt(e.d.cpow)} · Giáp ${CD.fmt(e.d.pdef)} · Kháng chú ${CD.fmt(e.d.cdef)}<br>Chiêu: ${e.skills.map((x) => esc(x.name) + " ×" + x.mult + (x.cd ? " (hồi " + x.cd + ")" : "")).join(", ")}</div>` : `<div class="mini">Chênh lệch quá lớn để đọc chỉ số.</div>`)
           : e.hp > 0 ? `<button class="ghost sm" data-observe="${i}">Quan sát (miễn phí)</button>` : ""}
-      </div>`;
+      </div></div></div>`;
     }).join("");
-    h += `<div class="me"><strong>Shen</strong>${bar(S.cur.hp, d.maxHP, "hp")}${bar(S.cur.ce, d.maxCE, "ce")}${bar(S.cur.sta, d.maxSTA, "sta")}</div>`;
+    h += `<div class="me"><div class="fwrap"><div class="cpt">${CD.ART.portrait("shen")}</div><div class="fbody"><strong>Shen</strong>${bar(S.cur.hp, d.maxHP, "hp")}${bar(S.cur.ce, d.maxCE, "ce")}${bar(S.cur.sta, d.maxSTA, "sta")}</div></div></div>`;
     if (c.log.length) h += `<div class="clog">${c.log.map((l) => `<div>${esc(l)}</div>`).join("")}</div>`;
     if (c.over) {
       const label = { win: "Chiến thắng", lose: "Thất bại", flee: "Đã thoát", survive: "Sống sót" }[c.over];
