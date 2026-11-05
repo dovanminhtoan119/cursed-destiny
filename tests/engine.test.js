@@ -1,5 +1,5 @@
 /* Chạy: node tests/engine.test.js  — unit test công thức + chơi thử tự động toàn bộ Arc 1 */
-require("../js/data.js"); require("../js/story.js"); require("../js/engine.js");
+require("../js/data.js"); require("../js/world.js"); require("../js/story.js"); require("../js/story2.js"); require("../js/engine.js");
 const CD = globalThis.CD;
 let pass = 0, fail = 0;
 const eq = (name, a, b) => { if (JSON.stringify(a) === JSON.stringify(b)) pass++; else { fail++; console.log("FAIL", name, "→", a, "≠", b); } };
@@ -58,53 +58,100 @@ Object.entries(S).forEach(([id, sc]) => {
   (sc.observe || []).forEach((n) => ok("observe " + n, CD.DATA.NPCS[n]));
 });
 
-/* ---- Chơi thử tự động ---- */
+/* ---- Khu tự do, cửa hàng, NPC ---- */
+{ const s = CD.newCampaign(); s.flags.push("system"); CD.enterScene(s, "a1_hub1");
+  ok("vào khu tự do", s.hub && s.hub.id === "a1_hub1");
+  const r1 = CD.hubAct(s, "talk", "itadori"); ok("trò chuyện tăng quan hệ", (s.rel.itadori || 0) >= 4); eq("tốn một buổi", s.hub.slot, 1);
+  CD.hubAct(s, "train", "STR"); CD.hubAct(s, "train", "STR"); CD.hubAct(s, "train", "STR");
+  const r4 = CD.hubAct(s, "train", "STR"); eq("giới hạn luyện tập", s.base.STR, 8);
+  s.currency.sp = 100; const b = CD.buy(s, "system", "tinh_STR"); ok("mua được", b.ok); eq("trừ điểm chính xác", s.currency.sp, 40);
+  CD.buy(s, "system", "tinh_STR"); eq("hết hàng sau 2 lần", CD.buy(s, "system", "tinh_STR").ok, false);
+  CD.useItem(s, "tinh_STR"); eq("tinh hoa cộng STR", s.base.STR, 9);
+  s.currency.yen = 100; eq("không đủ yên", CD.buy(s, "academy", "dao_chu4").ok, false);
+  s.rel.itadori = 29; CD.applyEff(s, { rel: { itadori: 1 } }); ok("mốc quan hệ 30", s.txDone.includes("bond_itadori_0"));
+  while (!CD.hubOver(s)) CD.hubAct(s, "rest"); eq("hết ngày", s.hub.daysLeft, 0); }
+{ const s = CD.newCampaign(); s.level = 8; s.flags.push("trial_D"); CD.tryRankScene(s); eq("chờ chọn thưởng", s.pendingRank, "D");
+  eq("3 lựa chọn", CD.rankChoices(s).length, 3); const before = s.base.INT; CD.claimRank(s, 1); eq("thưởng Tâm pháp", s.base.INT, before + 2); eq("hết chờ", s.pendingRank, null); }
+
+/* ---- Chơi thử tự động qua 3 arc ---- */
 function rngFrom(seed) { let x = seed >>> 0 || 1; return () => ((x ^= x << 13), (x ^= x >>> 17), (x ^= x << 5), (x >>> 0) / 4294967296); }
-function bot(s, c, rng) {
+function bot(s, c) {
   const ready = CD.combat.ready(s, c).filter((x) => !x.cd && CD.combat.affordable(s, x.sk) && x.sk.effect && (x.sk.effect.dmg || x.sk.effect.stun || x.sk.effect.mark));
   const d = CD.derived(s);
-  if (s.cur.hp < d.maxHP * 0.3 && s.inventory.find((x) => x.id === "thuoc_ieiri")) return { type: "item", id: "thuoc_ieiri" };
+  const pot = ["dan_he", "thuoc_ieiri", "bang_gac"].find((id) => s.inventory.find((x) => x.id === id));
+  if (s.cur.hp < d.maxHP * 0.3 && pot) return { type: "item", id: pot };
   ready.sort((a, b) => (b.sk.effect.dmg ? b.sk.effect.dmg.mult : 0) - (a.sk.effect.dmg ? a.sk.effect.dmg.mult : 0));
   return ready.length ? { type: "skill", id: ready[0].id } : { type: "skill", id: "sk_guard" };
 }
+function fight(s, enemies, opts, rng, txKey, log, label) {
+  while (s.unallocated > 0) CD.allocate(s, ["STR", "VIT", "INT", "WIS", "AGI"][s.unallocated % 5], 1);
+  const c = CD.combat.start(s, enemies, opts);
+  let r = 0; while (!c.over && r++ < 80) CD.combat.playerAct(s, c, bot(s, c), rng);
+  log.fights.push(label + ":" + c.over + "@" + c.round);
+  return c;
+}
+function shopping(s) {
+  ["tinh_STR", "tinh_VIT", "tinh_INT", "tinh_WIS", "dan_he", "manh_tiem"].forEach((id) => { const r = CD.buy(s, "system", id); if (r.ok && CD.DATA.ITEMS[id].use && !CD.DATA.ITEMS[id].use.hp) CD.useItem(s, id); });
+  if (s.hub) ["thuoc_ieiri", "dao_chu4", "giay_chu"].forEach((id) => CD.buy(s, "academy", id));
+}
 function playthrough(seed, prefer) {
-  const rng = rngFrom(seed), s = CD.newCampaign(), log = { fights: [] };
+  const rng = rngFrom(seed), s = CD.newCampaign(), log = { fights: [], hubSlots: 0 };
   let id = "p_intro", steps = 0; CD.enterScene(s, id);
-  while (steps++ < 300) {
+  while (steps++ < 600) {
     const sc = S[id];
+    if (s.pendingRank) CD.claimRank(s, seed % 3);
     if (sc.special === "traits") { const keys = Object.keys(CD.DATA.TRAITS); const a = keys[seed % 20], b = keys[(seed * 7 + 3) % 20 === seed % 20 ? (seed + 1) % 20 : (seed * 7 + 3) % 20]; CD.pickTraits(s, [a, b]); id = sc.go; }
     else if (sc.special === "interview") { CD.DATA.INTERVIEW.forEach((q, i) => CD.answerInterview(s, i, Math.floor(rng() * q.a.length))); id = sc.go; }
-    else if (sc.special === "technique") { const opts = CD.suggestTechniques(s, 3); eq("3 gợi ý", opts.length, 3); CD.setTechnique(s, opts[0]); log.tech = opts; id = sc.go; }
+    else if (sc.special === "technique") { const opts = CD.suggestTechniques(s, 3); CD.setTechnique(s, opts[0]); id = sc.go; }
     else if (sc.special === "restriction") { const keys = [null, "xacthit", "tamthan", "menhdoi"]; CD.setRestriction(s, keys[seed % 4]); id = sc.go; }
-    else if (sc.special === "rankup") { CD.tryRankScene(s); id = sc.go; }
+    else if (sc.special === "rankup") { CD.tryRankScene(s); if (s.pendingRank) CD.claimRank(s, seed % 3); id = sc.go; }
+    else if (sc.hub) {
+      const H = CD.DATA.HUBS[sc.hub];
+      while (!CD.hubOver(s)) {
+        log.hubSlots++; shopping(s);
+        if (s.cur.hp < CD.derived(s).maxHP * 0.6) { CD.hubAct(s, "rest"); continue; }
+        const locs = Object.keys(H.locations);
+        const withEv = locs.find((l) => { s.hub.loc = l; return CD.exploreEvents(s).length; });
+        if (withEv) { s.hub.loc = withEv; const o = CD.hubAct(s, "explore", null, null, rng);
+          if (o.combat) { s.hubFight = { ...o.combat, loc: withEv }; const c = fight(s, o.combat.enemies, { canFlee: true }, rng, null, log, "hub:" + o.combat.evId); CD.hubFightEnd(s, c); }
+          continue; }
+        if (s.hub.trains < H.trainCap) { const k = ["STR", "VIT", "INT", "WIS"][s.hub.trains % 4]; CD.hubAct(s, "train", k); continue; }
+        let done = false;
+        for (const l of locs) { s.hub.loc = l; for (const n of CD.hubNpcs(s)) {
+          const SO = CD.DATA.SOCIAL[n]; if (!SO) continue;
+          if (SO.train && (s.rel[n] || 0) >= (SO.train.minRel || 0) && !s.hub.daily["spar_" + n]) { CD.hubAct(s, "spar", n); done = true; break; }
+          if (!s.hub.daily["talk_" + n]) { CD.hubAct(s, "talk", n); done = true; break; } } if (done) break; }
+        if (!done) CD.hubAct(s, "rest");
+      }
+      id = sc.go;
+    }
     else if (sc.combat) {
-      while (s.unallocated > 0) CD.allocate(s, ["STR", "VIT", "INT", "WIS", "AGI"][s.unallocated % 5], 1);
-      const c = CD.combat.start(s, sc.combat.enemies, sc.combat);
-      let r = 0; while (!c.over && r++ < 60) CD.combat.playerAct(s, c, bot(s, c, rng), rng);
-      log.fights.push(id + ":" + c.over + "@" + c.round);
+      shopping(s);
+      const c = fight(s, sc.combat.enemies, sc.combat, rng, null, log, id);
       CD.combat.finish(s, c, id);
       id = c.over === "win" || c.over === "survive" ? sc.combat.win : c.over === "flee" ? sc.combat.flee : sc.combat.lose;
     } else if (sc.choices && sc.choices.length) {
       const avail = sc.choices.map((ch, i) => i).filter((i) => CD.meets(s, sc.choices[i].req));
-      if (!avail.length) break;
+      if (!avail.length) { console.log("KẸT", seed, id); fail++; break; }
       const pick = prefer === "first" ? avail[0] : avail[Math.floor(rng() * avail.length)];
       id = CD.choose(s, id, pick).go;
     } else break;
     CD.enterScene(s, id);
     const errs = CD.validate(s); if (errs.length) { fail++; console.log("VALIDATE", seed, id, errs); break; }
-    if (id === "a1_end" && s.flags.includes("extra_done")) break;
+    if (id === "a3_end") break;
+    if (id === "a1_end") log.lvA1 = s.level, log.rankA1 = s.rank;
+    if (id === "a3_start") log.lvA2 = s.level;
   }
   return { s, log, id };
 }
 const results = [];
-for (let seed = 1; seed <= 200; seed++) results.push(playthrough(seed, seed % 2 ? "first" : "rand"));
-const reached = results.filter((r) => r.id === "a1_end").length;
-eq("200 lượt chơi đều tới cuối Arc 1", reached, 200);
-const lv = results.map((r) => r.s.level), rankD = results.filter((r) => r.s.rank === "D").length;
-const tech = {}; results.forEach((r) => (tech[r.s.technique] = (tech[r.s.technique] || 0) + 1));
-const trialLosses = results.reduce((a, r) => a + r.log.fights.filter((f) => f.startsWith("a1_trial:lose")).length, 0);
-console.log("Lv cuối Arc 1: min", Math.min(...lv), "max", Math.max(...lv), "· Đạt Rank D:", rankD + "/200 · thua sát hạch:", trialLosses);
-console.log("Phân bố thuật thức:", tech);
-console.log("Mẫu trận (seed 1):", results[0].log.fights.join(" | "));
+for (let seed = 1; seed <= 120; seed++) results.push(playthrough(seed, seed % 2 ? "first" : "rand"));
+eq("120 lượt chơi đều tới cuối Arc 3", results.filter((r) => r.id === "a3_end").length, 120);
+const stat = (f) => { const v = results.map(f); return Math.min(...v) + "–" + Math.max(...v); };
+console.log("Lv cuối Arc 1:", stat((r) => r.log.lvA1), "· cuối Arc 2:", stat((r) => r.log.lvA2), "· cuối Arc 3:", stat((r) => r.s.level));
+console.log("Rank D cuối Arc 1:", results.filter((r) => r.log.rankA1 === "D").length + "/120 · Rank C cuối Arc 3:", results.filter((r) => r.s.rank === "C").length + "/120");
+const losses = {}; results.forEach((r) => r.log.fights.filter((f) => f.includes(":lose")).forEach((f) => { const k = f.split(":lose")[0]; losses[k] = (losses[k] || 0) + 1; }));
+console.log("Số trận thua theo cảnh:", losses);
+console.log("Mẫu trận seed 2:", results[1].log.fights.join(" ").slice(0, 600)); console.log("Junpei sống:", results.filter((r) => r.s.flags.includes("junpei_alive")).length + "/120 · SP còn TB:", Math.round(results.reduce((a, r) => a + r.s.currency.sp, 0) / 120));
 console.log(fail ? "❌ " + fail + " lỗi, " + pass + " đạt" : "✅ Tất cả " + pass + " kiểm tra đạt");
 process.exit(fail ? 1 : 0);

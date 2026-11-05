@@ -262,8 +262,8 @@
   const ARCS = [
     { id: "arc0", name: "Mở đầu: Tủ đồ số 44", rank: "E", lv: "1–3", playable: true, npcs: ["gojo", "c_tu44"], sum: "Hệ thống thức tỉnh, Shen chọn hai đặc tính và lần đầu chạm vào chú lực." },
     { id: "arc1", name: "Thai nhi Chú vật", rank: "E → D", lv: "3–8", playable: true, npcs: ["itadori", "fushiguro", "kugisaki", "gojo", "ijichi", "ieiri", "yaga", "c_womb", "sukuna_a1"], sum: "Nhiệm vụ đầu tiên, Chú thai đặc cấp, phỏng vấn và thức tỉnh thuật thức, sát hạch Cấp 3." },
-    { id: "arc2", name: "Đối đầu Mahito", rank: "D", lv: "8–14", npcs: ["nanami", "junpei", "itadori", "mahito", "jogo", "hanami", "kenjaku"], sum: "Vụ án thị trấn Satozakura và chú linh chạm vào linh hồn." },
-    { id: "arc3", name: "Giao lưu Kyoto", rank: "D → C", lv: "14–20", npcs: ["maki", "inumaki", "panda", "todo", "kamo", "mai", "momo", "miwa", "mechamaru", "utahime", "gakuganji", "hanami"], sum: "Giải đấu hai trường và cuộc đột kích của chú linh." },
+    { id: "arc2", name: "Đối đầu Mahito", rank: "D", lv: "8–14", playable: true, npcs: ["nanami", "junpei", "itadori", "mahito", "jogo", "hanami", "kenjaku"], sum: "Vụ án thị trấn Satozakura và chú linh chạm vào linh hồn." },
+    { id: "arc3", name: "Giao lưu Kyoto", rank: "D → C", lv: "14–20", playable: true, npcs: ["maki", "inumaki", "panda", "todo", "kamo", "mai", "momo", "miwa", "mechamaru", "utahime", "gakuganji", "hanami"], sum: "Giải đấu hai trường và cuộc đột kích của chú linh." },
     { id: "arc4", name: "Cửu tướng Chú thai", rank: "C", lv: "20–25", npcs: ["itadori", "kugisaki", "fushiguro", "eso", "kechizu", "choso"], sum: "Anh em Chú thai và cây cầu Yasohachi." },
     { id: "arc5", name: "Ký ức Hoài Ngọc (nhánh phụ)", rank: "giữ nguyên", lv: "—", npcs: ["gojo", "geto_young", "riko", "toji", "ieiri"], sum: "Ký ức qua chú vật. Mở điều kiện Class ẩn." },
     { id: "arc6", name: "Sự biến Shibuya", rank: "C → B", lv: "25–40", npcs: ["gojo", "nanami", "meimei", "kusakabe", "naobito", "maki", "choso", "kenjaku", "uraume", "mahito", "jogo", "hanami", "dagon", "toji", "sukuna_a1"], sum: "Đêm Halloween. Sổ nhân quả ghi ai sống, ai chết." },

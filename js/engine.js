@@ -74,6 +74,7 @@
       milestonesHit: [],
       ledger: [], txDone: [], log: [],
       known: [],
+      hub: null, hubFight: null, shopBought: {}, pendingRank: null, rankHistory: [],
     };
     CD.recalc(s, true);
     return s;
@@ -259,13 +260,19 @@
     const ex = s.inventory.find((x) => x.id === id);
     if (ex && D().ITEMS[id].stack) ex.qty++; else s.inventory.push({ id, qty: 1 });
   };
-  CD.useItem = function (s, id) {
+  CD.useItem = function (s, id, inCombat) {
     const it = D().ITEMS[id], slot = s.inventory.find((x) => x.id === id);
     if (!it || !slot || !it.use) return null;
+    if (inCombat && (it.use.learn || it.use.base || it.use.points)) return "Không thể dùng " + it.name + " trong trận.";
+    if (it.use.learn && s.skills.includes(it.use.learn)) return "Đã biết kỹ năng này.";
     const d = CD.derived(s), msgs = [];
+    if (it.use.learn) { s.skills.push(it.use.learn); msgs.push("học " + D().SKILLS[it.use.learn].name); }
+    if (it.use.base) for (const k in it.use.base) { s.base[k] += it.use.base[k]; msgs.push(k + " cơ bản +" + it.use.base[k]); }
+    if (it.use.points) { s.unallocated += it.use.points; msgs.push("+" + it.use.points + " điểm chỉ số"); }
     if (it.use.hp) { const b = s.cur.hp; s.cur.hp = Math.min(d.maxHP, s.cur.hp + it.use.hp); msgs.push("HP " + b + "→" + s.cur.hp); }
     if (it.use.ce) { const b = s.cur.ce; s.cur.ce = Math.min(d.maxCE, s.cur.ce + it.use.ce); msgs.push("Chú lực " + b + "→" + s.cur.ce); }
     slot.qty--; if (slot.qty <= 0) s.inventory.splice(s.inventory.indexOf(slot), 1);
+    CD.recalc(s);
     return "Dùng " + it.name + ": " + msgs.join(", ");
   };
   const fmt = (n) => (Math.round(n * 100) / 100).toString();
@@ -281,7 +288,7 @@
     if (eff.moral) { const b = CD.moralTier(s.moral).name; s.moral = Math.max(-100, Math.min(100, s.moral + eff.moral)); const a = CD.moralTier(s.moral).name; if (a !== b) msgs.push("Thiện–Ác chuyển sang: " + a); }
     if (eff.anti) s.anti = Math.max(0, Math.min(100, s.anti + eff.anti));
     if (eff.rep) for (const k in eff.rep) { s.rep[k] = (s.rep[k] || 0) + eff.rep[k]; msgs.push("Danh vọng " + CD.FACTIONS[k] + " " + (eff.rep[k] > 0 ? "+" : "") + eff.rep[k]); }
-    if (eff.rel) for (const k in eff.rel) { s.rel[k] = Math.max(-100, Math.min(100, (s.rel[k] || 0) + eff.rel[k])); const n = D().NPCS[k]; msgs.push("Quan hệ " + (n ? n.name : k) + " " + (eff.rel[k] > 0 ? "+" : "") + eff.rel[k]); }
+    if (eff.rel) { for (const k in eff.rel) { s.rel[k] = Math.max(-100, Math.min(100, (s.rel[k] || 0) + eff.rel[k])); const n = D().NPCS[k]; msgs.push("Quan hệ " + (n ? n.name : k) + " " + (eff.rel[k] > 0 ? "+" : "") + eff.rel[k] + " = " + s.rel[k]); } CD.checkBonds(s, msgs); }
     if (eff.flag) [].concat(eff.flag).forEach((f) => !s.flags.includes(f) && s.flags.push(f));
     if (eff.known) [].concat(eff.known).forEach((f) => !s.known.includes(f) && s.known.push(f));
     if (eff.quest) [].concat(eff.quest).forEach((q) => {
@@ -297,6 +304,7 @@
     if (eff.arc) s.world.arc = eff.arc;
     if (eff.ledger) CD.addLedger(s, eff.ledger);
     if (eff.achievement && !s.achievements.includes(eff.achievement)) { s.achievements.push(eff.achievement); msgs.push("Thành tựu: " + D().ACHIEVEMENTS[eff.achievement]); }
+    if (eff.points) { s.unallocated += eff.points; msgs.push("+" + eff.points + " điểm chỉ số tự do"); }
     if (eff.exp) msgs.push(...CD.gainExp(s, eff.exp));
     CD.recalc(s);
     if (eff.hpSet) s.cur.hp = Math.min(s.cur.hp, eff.hpSet);
@@ -308,7 +316,9 @@
     const sc = CD.SCENES[id]; if (!sc) return ["Không tìm thấy cảnh " + id];
     s.scene = id;
     const msgs = CD.applyEff(s, sc.onEnter, "enter_" + id);
+    if (sc.onEveryEnter) msgs.push(...CD.applyEff(s, sc.onEveryEnter)); // ví dụ: hồi phục trước mỗi lần thử lại
     (sc.conds || []).forEach((c, i) => { if (CD.meets(s, c.req)) msgs.push(...CD.applyEff(s, c.eff, "cond_" + id + "_" + i)); });
+    if (sc.hub) CD.enterHub(s, sc.hub); else s.hub = null;
     return msgs;
   };
   CD.choose = function (s, id, idx) {
@@ -334,8 +344,147 @@
     const c = CD.rankCheck(s);
     if (!c.can) return ["[Hệ thống: Chưa đủ điều kiện đột phá Rank " + c.next + ". " + (c.lvOk ? "" : "Cần Lv " + c.minLv + " (hiện tại Lv " + s.level + "). ") + (c.trialOk ? "" : "Chưa hoàn thành sát hạch.") + "]"];
     const r = CD.rankUp(s), msgs = ["ĐỘT PHÁ: Rank " + r + " — " + CD.RANK_INFO[r].grade];
-    if (r === "D") msgs.push(...CD.applyEff(s, { item: "huy_hieu3", achievement: "a_rankD", rep: { tokyo: 5 } }, "rank_D"));
+    const R = D().RANK_REWARDS[r];
+    if (R) { msgs.push(...CD.applyEff(s, R.fixed, "rank_" + r)); s.pendingRank = r; msgs.push("[Hệ thống: Hãy chọn 1 phần thưởng đột phá.]"); }
+    CD.recalc(s, true);
     return msgs;
+  };
+  CD.claimRank = function (s, idx) {
+    const r = s.pendingRank, R = r && D().RANK_REWARDS[r]; if (!R) return null;
+    const ch = typeof R.choices === "function" ? R.choices(s)[idx] : R.choices[idx]; if (!ch) return null;
+    s.pendingRank = null; s.rankHistory.push({ rank: r, pick: ch.name });
+    const msgs = ["Phần thưởng đột phá: " + ch.name].concat(CD.applyEff(s, ch.eff, "rankpick_" + r));
+    CD.addLedger(s, { action: "Chọn phần thưởng đột phá Rank " + r + ": " + ch.name });
+    return msgs;
+  };
+  CD.rankChoices = function (s) { const R = s.pendingRank && D().RANK_REWARDS[s.pendingRank]; return !R ? [] : typeof R.choices === "function" ? R.choices(s) : R.choices; };
+
+  /* ---------- QUAN HỆ NPC ---------- */
+  CD.REL_TIERS = [[-100, "Thù địch"], [-30, "Lạnh nhạt"], [0, "Xa lạ"], [10, "Quen biết"], [30, "Bạn bè"], [60, "Thân thiết"], [90, "Tri kỷ"]];
+  CD.relTier = (v) => CD.REL_TIERS.filter((t) => (v || 0) >= t[0]).pop()[1];
+  CD.checkBonds = function (s, msgs) {
+    const SO = D().SOCIAL || {};
+    for (const id in SO) (SO[id].bonds || []).forEach((b, i) => {
+      const tx = "bond_" + id + "_" + i;
+      if ((s.rel[id] || 0) >= b.rel && !s.txDone.includes(tx)) {
+        s.txDone.push(tx);
+        msgs.push("MỐC QUAN HỆ · " + D().NPCS[id].name + " (" + CD.relTier(s.rel[id]) + "): " + b.text);
+        const e = Object.assign({}, b.eff); delete e.rel;
+        msgs.push(...CD.applyEff(s, e));
+      }
+    });
+  };
+
+  /* ---------- THỜI GIAN TỰ DO (HUB) ---------- */
+  CD.SLOTS = ["Sáng", "Chiều", "Tối"];
+  CD.SLOT_TIME = ["day", "dusk", "night"];
+  CD.enterHub = function (s, hubId) {
+    const H = D().HUBS[hubId];
+    if (!s.hub || s.hub.id !== hubId) s.hub = { id: hubId, daysLeft: H.days, slot: 0, loc: H.start, trains: 0, daily: {}, seen: [] };
+    return s.hub;
+  };
+  CD.hubDef = (s) => s.hub && D().HUBS[s.hub.id];
+  CD.hubNpcs = function (s, loc) {
+    const L = CD.hubDef(s).locations[loc || s.hub.loc], n = L.npcs || [];
+    return (Array.isArray(n[0]) ? n[s.hub.slot] || [] : n).filter((id) => !(D().SOCIAL[id] && D().SOCIAL[id].hideIf && s.flags.includes(D().SOCIAL[id].hideIf)));
+  };
+  CD.hubAdvance = function (s) {
+    const h = s.hub, msgs = [];
+    h.slot++;
+    if (h.slot > 2) {
+      h.slot = 0; h.daysLeft--; h.daily = {}; s.time.day++;
+      const d = CD.derived(s);
+      s.cur.hp = Math.min(d.maxHP, s.cur.hp + Math.floor(d.maxHP * 0.5)); s.cur.ce = d.maxCE; s.cur.sta = d.maxSTA;
+      msgs.push("Một ngày mới. Hồi 50% HP, hồi đầy Chú lực và Thể lực." + (h.daysLeft > 0 ? " Còn " + h.daysLeft + " ngày." : ""));
+    }
+    return msgs;
+  };
+  CD.hubOver = (s) => s.hub && s.hub.daysLeft <= 0;
+  /* Kết thúc trận trong khu tự do: thắng thì nhận thưởng sự kiện, thua/chạy thì sự kiện còn đó để thử lại */
+  CD.hubFightEnd = function (s, c) {
+    const f = s.hubFight; if (!f) return [];
+    const msgs = CD.combat.finish(s, c, f.tx);
+    const ev = (CD.hubDef(s).locations[f.loc].events || []).find((e) => e.id === f.evId);
+    if (c.over === "win" || c.over === "survive") { if (ev && ev.eff) msgs.push(...CD.applyEff(s, ev.eff, "evwin_" + f.evId)); }
+    else { s.txDone = s.txDone.filter((t) => t !== "ev_" + f.evId); msgs.push("Sự kiện vẫn còn đó, có thể quay lại sau."); }
+    s.hubFight = null;
+    return msgs;
+  };
+  CD.exploreEvents = function (s, loc) {
+    const L = CD.hubDef(s).locations[loc || s.hub.loc];
+    return (L.events || []).filter((e) => !s.txDone.includes("ev_" + e.id) && CD.meets(s, e.req) && (!e.slot || e.slot.includes(s.hub.slot)));
+  };
+  /* kind: rest | train | explore | talk | gift | spar */
+  CD.hubAct = function (s, kind, arg, arg2, rng) {
+    rng = rng || Math.random;
+    const h = s.hub, H = CD.hubDef(s), out = { msgs: [], text: [] };
+    if (CD.hubOver(s)) { out.msgs.push("Hết thời gian tự do."); return out; }
+    if (kind === "move") { if (H.locations[arg]) h.loc = arg; return out; }
+    if (kind === "rest") {
+      const d = CD.derived(s); s.cur.hp = d.maxHP; s.cur.ce = d.maxCE; s.cur.sta = d.maxSTA;
+      out.text.push("Shen nghỉ ngơi một buổi. Cơ thể hồi phục hoàn toàn.");
+    } else if (kind === "train") {
+      if (h.trains >= H.trainCap) { out.msgs.push("Đã đạt giới hạn luyện tập trong đợt này (" + H.trainCap + " buổi). Cơ thể cần thời gian thích nghi."); return out; }
+      h.trains++;
+      s.base[arg] += 1;
+      out.text.push("Shen dành cả buổi luyện " + CD.STAT_NAME[arg].toLowerCase() + ".");
+      out.msgs.push(arg + " cơ bản +1 (buổi " + h.trains + "/" + H.trainCap + ")", ...CD.gainExp(s, 30 * s.level));
+    } else if (kind === "explore") {
+      const evs = CD.exploreEvents(s);
+      if (!evs.length) { out.text.push(H.locations[h.loc].idle || "Shen đi một vòng nhưng không có gì đặc biệt."); out.msgs.push(...CD.gainExp(s, 10 * s.level)); }
+      else {
+        const tot = evs.reduce((a, e) => a + (e.w || 1), 0); let r = rng() * tot, ev = evs[0];
+        for (const e of evs) { r -= e.w || 1; if (r <= 0) { ev = e; break; } }
+        s.txDone.push("ev_" + ev.id); out.event = ev; out.text.push(...ev.text);
+        if (ev.combat) out.combat = { enemies: ev.combat, tx: "hubfight_" + ev.id, evId: ev.id, canFlee: ev.canFlee !== false, title: ev.title || "Chạm trán", text: ev.text };
+        else out.msgs.push(...CD.applyEff(s, ev.eff));
+      }
+    } else if (kind === "talk") {
+      const SO = D().SOCIAL[arg], key = "talk_" + arg;
+      const topics = (SO.talk || []).map((t, i) => ({ t, i })).filter(({ t, i }) => !s.txDone.includes(key + "_" + i) && (s.rel[arg] || 0) >= (t.minRel || 0) && CD.meets(s, t.req));
+      if (topics.length) {
+        const { t, i } = topics[0]; s.txDone.push(key + "_" + i);
+        out.text.push(...t.text); out.msgs.push(...CD.applyEff(s, Object.assign({ rel: { [arg]: 4 } }, t.eff)));
+      } else if (!h.daily[key]) {
+        h.daily[key] = 1; out.text.push(SO.idle || "Hai người nói chuyện vu vơ một lúc.");
+        out.msgs.push(...CD.applyEff(s, { rel: { [arg]: 2 } }));
+      } else { out.msgs.push("Hôm nay đã trò chuyện rồi."); return out; }
+    } else if (kind === "gift") {
+      const SO = D().SOCIAL[arg], it = s.inventory.find((x) => x.id === arg2), key = "gift_" + arg;
+      if (!it) return out; if (h.daily[key]) { out.msgs.push("Hôm nay đã tặng quà rồi."); return out; }
+      h.daily[key] = 1; it.qty--; if (it.qty <= 0) s.inventory.splice(s.inventory.indexOf(it), 1);
+      const liked = (SO.likes || []).includes(arg2);
+      out.text.push(liked ? SO.likeText || "Có vẻ rất thích món quà." : "Nhận quà, gật đầu cảm ơn.");
+      out.msgs.push(...CD.applyEff(s, { rel: { [arg]: liked ? 10 : 3 } }));
+    } else if (kind === "spar") {
+      const SO = D().SOCIAL[arg], tr = SO.train, key = "spar_" + arg;
+      if (!tr || (s.rel[arg] || 0) < (tr.minRel || 0)) { out.msgs.push("Chưa đủ thân để nhờ luyện tập."); return out; }
+      if (h.daily[key]) { out.msgs.push("Hôm nay đã luyện cùng rồi."); return out; }
+      h.daily[key] = 1; out.text.push(tr.text);
+      const b = {}; tr.stats.forEach((k) => (b[k] = 1));
+      out.msgs.push(...CD.applyEff(s, { base: b, rel: { [arg]: 3 }, exp: 40 * s.level }));
+    }
+    out.msgs.push(...CD.hubAdvance(s));
+    return out;
+  };
+
+  /* ---------- CỬA HÀNG ---------- */
+  CD.shopStock = function (s, shopId, it) {
+    const key = s.world.arc + ":" + shopId + ":" + it.id;
+    return it.stock == null ? Infinity : it.stock - (s.shopBought[key] || 0);
+  };
+  CD.shopOpen = function (s, shopId) { const sh = D().SHOPS[shopId]; return !sh.hubOnly || !!(s.hub && !CD.hubOver(s)); };
+  CD.buy = function (s, shopId, itemId) {
+    const sh = D().SHOPS[shopId], it = sh.items.find((x) => x.id === itemId);
+    if (!it || !CD.shopOpen(s, shopId)) return { ok: false, msg: "Cửa hàng chưa mở." };
+    if (it.req && !CD.meets(s, it.req)) return { ok: false, msg: "Chưa đủ điều kiện mua." };
+    if (CD.shopStock(s, shopId, it) <= 0) return { ok: false, msg: "Đã hết hàng trong arc này." };
+    const cur = sh.currency, have = s.currency[cur];
+    if (have < it.price) return { ok: false, msg: "Không đủ " + (cur === "sp" ? "Điểm Hệ thống" : "yên") + ": cần " + it.price + ", có " + have + "." };
+    s.currency[cur] = have - it.price;
+    const key = s.world.arc + ":" + shopId + ":" + it.id; s.shopBought[key] = (s.shopBought[key] || 0) + 1;
+    const msgs = [(cur === "sp" ? "Điểm Hệ thống " : "Yên ") + have + " − " + it.price + " = " + s.currency[cur]].concat(CD.addItem(s, it.id, 1));
+    return { ok: true, msgs };
   };
 
   CD.meets = function (s, req) {
@@ -348,13 +497,15 @@
       if (k === "notFlag" && s.flags.includes(req.notFlag)) return false;
       if (k === "technique" && !s.technique) return false;
       if (k === "moralMin" && s.moral < req.moralMin) return false;
+      if (k === "rel") for (const n in req.rel) if ((s.rel[n] || 0) < req.rel[n]) return false;
+      if (k === "anyFlag" && !req.anyFlag.some((f) => s.flags.includes(f))) return false;
     }
     return true;
   };
   CD.reqText = function (req) {
     if (!req) return "";
     return Object.entries(req).map(([k, v]) =>
-      CD.STATS.includes(k) ? k + " ≥ " + v : k === "level" ? "Lv ≥ " + v : k === "technique" ? "Cần thuật thức" : k === "moralMin" ? "Thiện–Ác ≥ " + v : "").filter(Boolean).join(", ");
+      CD.STATS.includes(k) ? k + " ≥ " + v : k === "level" ? "Lv ≥ " + v : k === "rel" ? Object.entries(v).map(([n, x]) => "Quan hệ " + ((D().NPCS[n] || {}).name || n) + " ≥ " + x).join(", ") : k === "technique" ? "Cần thuật thức" : k === "moralMin" ? "Thiện–Ác ≥ " + v : "").filter(Boolean).join(", ");
   };
 
   /* ---------- PHẦN VII: GỢI Ý THUẬT THỨC TỪ DẤU VẾT ---------- */
@@ -374,9 +525,11 @@
 
   /* ---------- PHẦN VI.6: CHIẾN ĐẤU ---------- */
   CD.CURSE_HP_MULT = 1.5;
+  CD.SP_BY_RANK = { E: 5, D: 15, C: 40, B: 100, A: 250, S: 600, SS: 1500, SSS: 4000 };
   CD.makeFighter = function (npcId) {
     const n = D().NPCS[npcId];
     const d = CD.derive(n.stats, n.lv);
+    if (n.hpMult) d.maxHP = Math.floor(d.maxHP * n.hpMult);
     if (npcId.startsWith("c_")) d.maxHP = Math.floor(d.maxHP * CD.CURSE_HP_MULT); // World Rule: chú linh bền hơn
     return { id: npcId, name: n.name, rank: n.rank, lv: n.lv, stats: n.stats, d, hp: d.maxHP, ce: d.maxCE, skills: n.skills || [], exp: n.exp || 0, cds: {}, debuff: [], marks: 0, stun: 0 };
   };
@@ -402,7 +555,8 @@
         guard: false, stored: 0, reflectArmed: false, ychiUsed: false, opts: opts || {}, over: null, observed: [],
       };
     },
-    target(c) { return c.enemies.find((e) => e.hp > 0); },
+    target(c) { const t = c.enemies[c.tIdx || 0]; return t && t.hp > 0 ? t : c.enemies.find((e) => e.hp > 0); },
+    setTarget(c, i) { if (c.enemies[i] && c.enemies[i].hp > 0) c.tIdx = i; },
     ready(s, c) {
       return s.skills.map((k) => ({ id: k, sk: D().SKILLS[k], cd: c.cds[k] || 0 }))
         .filter((x) => x.sk && x.sk.combat !== false);
@@ -423,7 +577,7 @@
       if (c.over) return;
       const m = CD.mods(s), eff = CD.effective(s).stats, d = CD.derive(eff, s.level, m);
       const t = this.target(c);
-      const L = c.log; L.length = 0;
+      const L = c.log; L.length = 0; c.hits = { foe: {}, me: 0 }; c.history = c.history || [];
       c.guard = false;
       if (action.type === "flee") {
         const p = Math.min(0.9, 0.3 + (eff.AGI - t.stats.AGI) * 0.03);
@@ -431,7 +585,7 @@
         else if (rng() < p) { L.push("Shen thoát khỏi trận chiến."); c.over = "flee"; return; }
         else L.push("Bỏ chạy thất bại (" + Math.round(p * 100) + "%).");
       } else if (action.type === "item") {
-        L.push(CD.useItem(s, action.id) || "Không dùng được.");
+        L.push(CD.useItem(s, action.id, true) || "Không dùng được.");
       } else if (action.type === "skill") {
         const sk = D().SKILLS[action.id];
         if ((c.cds[action.id] || 0) > 0 || !this.affordable(s, sk)) { L.push("Kỹ năng chưa sẵn sàng."); return; }
@@ -461,7 +615,7 @@
           const crit = rng() < d.crit;
           const mod = (e.dmg.src === "patk" ? m.dmgPhys : m.dmgCurse) * (s.traits.includes("ychi") && s.cur.hp < CD.derived(s).maxHP * 0.25 ? 1.2 : 1);
           const dmg = CD.calcDamage(atk, mult, def, { crit, mod });
-          t.hp -= dmg;
+          t.hp -= dmg; c.hits.foe[c.enemies.indexOf(t)] = (c.hits.foe[c.enemies.indexOf(t)] || 0) + dmg;
           L.push(sk.name + " gây " + dmg + " sát thương" + (crit ? " (CHÍ MẠNG)" : "") + " lên " + t.name + ".");
           if (e.mark) { t.marks = Math.min(3, t.marks + 1); L.push("Ấn khắc trên " + t.name + ": " + t.marks + "/3."); }
           if (e.drain) { const g = Math.floor(dmg * e.drain); s.cur.ce = Math.min(CD.derived(s).maxCE, s.cur.ce + g); L.push("Nuốt " + g + " chú lực."); }
@@ -476,7 +630,7 @@
       c.enemies.forEach((e) => {
         if (e.hp <= 0 && !e.dead) { e.dead = true; L.push(e.name + " bị tiêu diệt."); }
       });
-      if (!this.target(c)) { c.over = "win"; return; }
+      if (!this.target(c)) { c.over = "win"; c.history.push({ round: c.round, lines: L.slice() }); return; }
       // Lượt kẻ địch
       c.enemies.filter((e) => e.hp > 0).forEach((e) => {
         if (e.stun) { e.stun = 0; L.push(e.name + " không thể hành động."); return; }
@@ -492,7 +646,7 @@
         let dmg = CD.calcDamage(atk, sk.mult, def, { crit: rng() < e.d.crit });
         if (c.reflectArmed) { const st = Math.floor(dmg * 0.6); c.stored += st; dmg -= st; c.reflectArmed = false; L.push("Gương chú lực hứng " + st + " sát thương."); }
         if (c.guard) dmg = Math.floor(dmg / 2);
-        s.cur.hp -= dmg;
+        s.cur.hp -= dmg; c.hits.me += dmg;
         L.push(e.name + " dùng " + sk.name + ": −" + dmg + " HP.");
         if (s.cur.hp <= 0 && s.traits.includes("ychi") && !c.ychiUsed) { s.cur.hp = 1; c.ychiUsed = true; L.push("Ý Chí Bất Khuất: Shen trụ lại với 1 HP!"); }
       });
@@ -502,6 +656,7 @@
       const d = CD.derived(s), m = CD.mods(s);
       s.cur.ce = Math.min(d.maxCE, s.cur.ce + m.ceRegen);
       s.cur.sta = Math.min(d.maxSTA, s.cur.sta + m.staRegen);
+      c.history.push({ round: c.round, lines: L.slice() });
       if (s.cur.hp <= 0) { s.cur.hp = 0; c.over = "lose"; return; }
       if (c.opts.surviveTurns && c.round >= c.opts.surviveTurns) { c.over = "survive"; return; }
       c.round++;
@@ -522,8 +677,9 @@
             } else msgs.push("Thực Chú: " + e.name + " không còn gì để hấp thụ.");
           }
         });
-        const total = c.enemies.filter((e) => e.dead).reduce((a, e) => a + e.exp, 0);
-        if (total) msgs.push(...CD.applyEff(s, { exp: total }, "combat_" + sceneId));
+        const dead = c.enemies.filter((e) => e.dead);
+        const total = dead.reduce((a, e) => a + e.exp, 0), sp = dead.reduce((a, e) => a + (CD.SP_BY_RANK[e.rank] || 0), 0);
+        if (total || sp) msgs.push(...CD.applyEff(s, { exp: total, sp }, "combat_" + sceneId));
       }
       if (c.over === "lose") s.cur.hp = 1;
       CD.recalc(s);
@@ -552,7 +708,9 @@
     let o; try { o = JSON.parse(txt); } catch (e) { return { ok: false, err: "Không đọc được dữ liệu. Hãy dán đúng chuỗi đã xuất." }; }
     if (o.game !== "cursed-destiny") return { ok: false, err: "Đây không phải file lưu của Cursed Destiny." };
     if (CD.hash(o.body) !== o.sum) return { ok: false, err: "Dữ liệu đã bị chỉnh sửa hoặc hỏng (sai mã kiểm tra)." };
-    const s = JSON.parse(o.body); const errs = CD.validate(s);
+    const s = JSON.parse(o.body);
+    const fresh = CD.newCampaign(); for (const k in fresh) if (!(k in s)) s[k] = fresh[k]; // nâng cấp bản lưu cũ
+    const errs = CD.validate(s);
     return errs.length ? { ok: false, err: "Dữ liệu lỗi: " + errs.join("; ") } : { ok: true, s };
   };
   CD.validate = function (s) {

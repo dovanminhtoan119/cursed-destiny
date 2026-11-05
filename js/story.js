@@ -198,7 +198,11 @@
         "[Hệ thống: có thể Quan sát cá thể trong tầm mắt.]",
       ],
       observe: ["itadori", "fushiguro"],
-      choices: [{ t: "Giới thiệu bản thân", go: "a1_nobara" }] },
+      choices: [{ t: "Giới thiệu bản thân", go: "a1_hub1" }] },
+
+    a1_hub1: { chapter: "Arc 1 · Thời gian tự do", title: "Tuần đầu ở học viện", env: "day/temple", cast: ["shen"],
+      text: ["Itadori kéo Shen đi tham quan khắp trường trong khi Fushiguro đi phía sau, thở dài liên tục.", "[Hệ thống: Mở khóa Thời gian tự do. Mỗi ngày có ba buổi: Sáng, Chiều, Tối. Mỗi hoạt động tốn một buổi.]"],
+      hub: "a1_hub1", go: "a1_nobara" },
 
     a1_nobara: { chapter: "Arc 1", title: "Người thứ tư",
       onEnter: { item: { id: "keo_gojo", qty: 2 }, rel: { kugisaki: 3 } },
@@ -262,7 +266,7 @@
         "> Không sao rồi. Chị đưa em về.",
         "Ngoài cửa sổ, Gojo vẫy tay từ tầng thượng tòa nhà đối diện như đang xem một trận bóng đá.",
       ],
-      choices: [{ t: "Trở về trường", go: "a1_training" }] },
+      choices: [{ t: "Trở về trường", go: "a1_debrief" }] },
 
     a1_child_lose: { chapter: "Arc 1", title: "Cây đinh",
       onEnter: { exp: 150, heal: 80, quest: [{ id: "q_roppongi", status: "done" }, { id: "q_child", status: "failed" }], rel: { kugisaki: 4 } },
@@ -272,71 +276,23 @@
         "Chú linh nổ tung. Kugisaki đứng đó, thở hổn hển, cây búa vẫn giơ lên.",
         "> Lần sau đợi tôi tới rồi hẵng liều, nghe chưa?",
       ],
-      choices: [{ t: "Trở về trường", go: "a1_training" }] },
+      choices: [{ t: "Trở về trường", go: "a1_debrief" }] },
 
-    a1_training: { chapter: "Arc 1", title: "Một tuần ở học viện",
-      onEnter: { time: { days: 7, label: "Tháng 6, 2018" } },
+    a1_debrief: { chapter: "Arc 1", title: "Buổi rút kinh nghiệm", env: "dusk/temple", cast: ["shen", "gojo", "itadori", "kugisaki"],
+      onEnter: { sp: 30, exp: 200 },
       text: [
-        "Một tuần trôi qua. Buổi sáng học lý thuyết chú lực, buổi chiều tự luyện tập.",
-        "[Hệ thống: Ký chủ có một suất luyện tập chuyên sâu trong tuần này. Hãy chọn.]",
+        "Gojo mua kem cho cả nhóm, rồi ngồi giữa sân trường chấm điểm từng người như chấm bài kiểm tra.",
+        "> Itadori: mười điểm sức mạnh, hai điểm suy nghĩ. Kugisaki: tám điểm, trừ hai vì mắng tôi. Shen...",
+        "Anh ta nghiêng đầu.",
+        "> Nhóc học nhanh hơn tôi nghĩ. Nhưng nhóc nhìn mọi thứ như đang đọc chỉ số. Đôi khi phải nhìn bằng mắt thôi.",
+        "[Hệ thống: Hoàn thành nhiệm vụ đầu tiên. Thưởng 30 Điểm Hệ thống. Cửa hàng Hệ thống đã mở.]",
       ],
-      choices: [
-        { t: "Tập đối kháng với Itadori trên sân thượng", go: "a1_train_yuji", eff: { trace: { xungkich: 1 }, rel: { itadori: 6 } } },
-        { t: "Nhờ Fushiguro giảng về cấu trúc thuật thức", go: "a1_train_megumi", eff: { trace: { quansat: 1 }, rel: { fushiguro: 6 } } },
-        { t: "Ở lại một mình, thiền định cảm nhận chú lực", go: "a1_train_solo", eff: { trace: { phongan: 1, anhsang: 1 } } },
-      ] },
+      choices: [{ t: "Bắt đầu tuần nghỉ", go: "a1_hub2" }] },
 
-    a1_train_yuji: { chapter: "Arc 1", title: "Nửa nhịp chậm",
-      onEnter: { exp: 300, skill: "sk_delay", base: { STR: 1 } },
-      text: [
-        "Itadori đánh nhanh tới mức chú lực của cậu ta đến sau nắm đấm nửa nhịp, tạo thành hai lần va chạm trong một cú đấm.",
-        "> Tớ cũng không biết sao nó thành vậy. Cứ đấm thật mạnh thôi!",
-        "Sau ba ngày bầm dập, Shen bắt chước được một phiên bản vụng về của đòn đó.",
-        "[Học kỹ năng: Quyền chú lực trễ nhịp.]",
-      ],
-      choices: [{ t: "Tiếp tục", go: "a1_patrol" }] },
-
-    a1_train_megumi: { chapter: "Arc 1", title: "Bản vẽ của thuật thức",
-      onEnter: { exp: 300, base: { INT: 1, WIS: 1 } },
-      text: [
-        "> Thuật thức khắc sẵn trong cơ thể từ lúc sinh ra. Chú lực chỉ là nhiên liệu. Người không có thuật thức thì chỉ đấm được bằng chú lực thôi.",
-        "Fushiguro nói nhát gừng, nhưng giảng rất rõ. Shen ghi kín hai cuốn sổ.",
-        "> Còn cậu... chú lực của cậu đặc lắm, nhưng không chảy theo hình dạng nào cả. Như thể thuật thức vẫn chưa được viết xong.",
-      ],
-      choices: [{ t: "Tiếp tục", go: "a1_patrol" }] },
-
-    a1_train_solo: { chapter: "Arc 1", title: "Tĩnh lặng",
-      onEnter: { exp: 300, base: { WIS: 1, VIT: 1 } },
-      text: [
-        "Shen ngồi một mình trong võ đường mỗi tối, nhắm mắt, cảm nhận dòng chú lực chạy trong người.",
-        "Đến đêm thứ năm, cậu nhận ra Hệ thống có một nhịp riêng, như một trái tim thứ hai đập lệch nhịp với trái tim của mình.",
-        "[Hệ thống: Ký chủ đã nhận thức được nhịp của Hệ thống. Thông tin ghi nhận.]",
-      ],
-      choices: [{ t: "Tiếp tục", go: "a1_patrol", eff: { known: "nhip_he_thong" } }] },
-
-    a1_patrol: { chapter: "Arc 1", title: "Nhiệm vụ tuần tra",
-      text: [
-        "Ijichi đưa cho Shen một tập hồ sơ mỏng.",
-        "> Một nhà ga bỏ hoang ở Saitama. Có báo cáo về chú linh cấp 4 tụ tập. Cậu đi một mình được chứ? Tôi sẽ dựng màn bên ngoài.",
-      ],
-      choices: [
-        { t: "Nhận nhiệm vụ", go: "a1_patrol_fight", eff: { quest: { id: "q_patrol", status: "active" } } },
-        { t: "Từ chối, xin nghỉ ngơi", go: "a1_eishu", eff: { rep: { tokyo: -2 } } },
-      ] },
-
-    a1_patrol_fight: { chapter: "Arc 1", title: "Nhà ga bỏ hoang",
-      text: ["Trong bóng tối của sân ga, hàng chục chú linh nhỏ quấn vào nhau thành một khối nhầy nhụa, lăn về phía Shen."],
-      combat: { enemies: ["c_cap4c"], win: "a1_patrol_win", lose: "a1_patrol_lose", canFlee: true, flee: "a1_eishu" } },
-
-    a1_patrol_win: { chapter: "Arc 1", title: "Sân ga im lặng",
-      onEnter: { exp: 200, yen: 20000, quest: { id: "q_patrol", status: "done" }, rep: { tokyo: 3 }, item: { id: "thuoc_ieiri", qty: 1 } },
-      text: ["Khối chú linh tan rã. Ijichi gỡ màn, gật đầu hài lòng, đưa cho Shen phong bì thù lao và một lọ thuốc của bác sĩ Ieiri."],
-      choices: [{ t: "Tiếp tục", go: "a1_eishu" }] },
-
-    a1_patrol_lose: { chapter: "Arc 1", title: "Rút lui",
-      onEnter: { heal: 100, quest: { id: "q_patrol", status: "failed" } },
-      text: ["Shen rút ra ngoài màn, người đầy vết cào. Ijichi gọi một chú thuật sư cấp 2 tới dọn dẹp."],
-      choices: [{ t: "Tiếp tục", go: "a1_eishu" }] },
+    a1_hub2: { chapter: "Arc 1 · Thời gian tự do", title: "Một tuần ở học viện", env: "day/temple", cast: ["shen", "ijichi"],
+      onEnter: { quest: { id: "q_patrol", status: "active" } },
+      text: ["Ijichi đưa cho Shen hai tập hồ sơ mỏng: một nhà ga bỏ hoang ở Saitama, một bệnh viện bỏ hoang ở Chiba.", "> Không bắt buộc đâu. Nhưng làm xong thì có thù lao."],
+      hub: "a1_hub2", go: "a1_eishu" },
 
     a1_eishu: { chapter: "Arc 1", title: "Trại giam Eishū",
       onEnter: { time: { days: 5, label: "Tháng 7, 2018" }, heal: "full", quest: { id: "q_eishu", status: "active" } },
@@ -465,7 +421,7 @@
       combat: { enemies: ["c_trial"], win: "a1_trial_win", lose: "a1_trial_lose", canFlee: false } },
 
     a1_trial_lose: { chapter: "Arc 1", title: "Chưa đủ",
-      onEnter: { heal: "full" },
+      onEveryEnter: { heal: "full" },
       text: [
         "Yaga phong ấn chú linh lại ngay trước khi nó kịp xé cổ Shen.",
         "> Chưa đủ. Nghỉ ngơi, phân bổ lại sức lực, rồi quay lại.",
@@ -481,28 +437,12 @@
       ],
       special: "rankup", go: "a1_end" },
 
-    a1_extra: { chapter: "Arc 1", title: "Nhiệm vụ phụ: Bệnh viện bỏ hoang",
-      text: [
-        "Ijichi giao thêm một nhiệm vụ: khu bệnh viện bỏ hoang ở Chiba, nơi người dân nghe thấy tiếng trẻ con khóc lúc nửa đêm.",
-      ],
-      observe: ["c_hosp"],
-      choices: [{ t: "Vào trong", go: "a1_extra_fight" }, { t: "Để sau", go: "a1_end" }] },
-
-    a1_extra_fight: { chapter: "Arc 1", title: "Hành lang bệnh viện",
-      text: ["Tiếng khóc vọng ra từ cuối hành lang, rồi một bóng người bò bằng bốn chi lao về phía Shen."],
-      combat: { enemies: ["c_hosp"], win: "a1_extra_win", lose: "a1_end", canFlee: true, flee: "a1_end" } },
-
-    a1_extra_win: { chapter: "Arc 1", title: "Im lặng",
-      onEnter: { yen: 30000, rep: { danthuong: 3, tokyo: 2 } },
-      text: ["Tiếng khóc tắt hẳn. Bệnh viện chỉ còn tiếng mưa."],
-      special: "rankup", go: "a1_end" },
-
-    a1_end: { chapter: "Hết Arc 1", title: "Còn tiếp: Đối đầu Mahito",
+    a1_end: { chapter: "Hết Arc 1", env: "dusk/temple", cast: ["shen", "fushiguro"], title: "Tưởng niệm",
       text: [
         "Học viện tổ chức một buổi tưởng niệm nhỏ cho Itadori Yuji. Gojo không tới. Fushiguro đứng ở hàng cuối, im lặng suốt buổi.",
         "Tối hôm đó, Shen mở bảng Hệ thống và nhìn rất lâu vào dòng chữ cuối cùng trong nhật ký nhân quả.",
-        "[Arc 2 — Đối đầu Mahito: đang được phát triển.]",
+        "Nhưng ở một nơi khác của Tokyo, có một người lẽ ra đã chết đang ngồi xem phim kinh dị dưới tầng hầm.",
       ],
-      choices: [{ t: "Làm nhiệm vụ phụ ở bệnh viện bỏ hoang", go: "a1_extra", req: { notFlag: "extra_done" }, eff: { flag: "extra_done" } }] },
+      choices: [{ t: "Bắt đầu Arc 2: Đối đầu Mahito", go: "a2_start" }] },
   };
 })(typeof window !== "undefined" ? window : globalThis);

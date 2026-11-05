@@ -177,3 +177,61 @@ textarea { width: 100%; background: var(--ink); color: var(--paper); border: 1px
 .foe .cpt svg { border-color: #8a6cff }
 .grp { font-style: normal; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--gold) }
 @media (max-width: 420px) { .pt, .pt svg { width: 52px } .pt svg { height: 52px } .cast { gap: 4px } }
+
+/* ===== Khu tự do ===== */
+.hubbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--ink-2); border: 1px solid var(--line); border-top: 0; padding: 10px 12px }
+.hubbar > div:first-child { display: grid } .hubbar span { color: var(--mist); font-size: .85rem }
+.slots { display: flex; gap: 4px } .slots i { font-style: normal; font-size: .75rem; padding: 2px 8px; border-radius: 3px; border: 1px solid var(--line); color: var(--mist) }
+.slots i.now { border-color: var(--gold); color: var(--gold) } .slots i.used { opacity: .35; text-decoration: line-through }
+.scene.compact { padding: 14px 16px 6px 22px; margin-top: 10px; border-radius: 2px }
+.event { margin-top: 12px; background: var(--paper); color: var(--paper-ink); border-radius: 2px; padding: 14px 16px; border-left: 4px solid var(--curse) }
+.event p { margin: 0 0 .6em } .event .msgs { margin-top: 8px }
+.locs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin-bottom: 14px }
+.loc { text-align: left; background: var(--ink-2); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; display: grid; gap: 2px }
+.loc small { color: var(--gold); font-size: .72rem; min-height: 1em } .loc.on { border-color: var(--gold); box-shadow: inset 3px 0 0 var(--gold) }
+.npcbox { background: var(--ink-2); border: 1px solid var(--line); border-radius: 4px; padding: 10px; margin-bottom: 8px }
+.npcbox .row { margin-top: 4px } .tier { font-style: normal; font-size: .75rem; color: var(--gold) }
+.bar.rel { height: 8px } .bar.rel i { background: #d9708a } .bar.rel span { display: none }
+.gifts .liked { border-color: #d9708a; color: #ffb3c4 }
+.endhub { margin-top: 18px; text-align: center }
+.relrow { display: flex; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line) } .relrow:first-of-type { border-top: 0 }
+
+/* ===== Chiến đấu ===== */
+body.fighting .wrap { padding-bottom: 260px }
+.arena { position: relative; margin-top: 6px; aspect-ratio: 600 / 230; max-width: 100%; border-radius: 3px; overflow: hidden; background: #000 }
+.arena .bg { position: absolute; inset: 0; width: 100%; height: 100%; filter: brightness(.75) }
+.foes { position: absolute; top: 34px; right: 10px; display: flex; gap: 8px }
+.fpt { position: relative; padding: 0; border: 2px solid #8a6cff; border-radius: 6px; background: none; width: 96px; height: 96px; box-shadow: 0 6px 16px #000b }
+.fpt svg { width: 100%; height: 100%; display: block; border-radius: 4px }
+.fpt.target { border-color: var(--gold); box-shadow: 0 0 0 3px #d9b45f66, 0 6px 16px #000b }
+.fpt.dead { opacity: .3; filter: grayscale(1) }
+.mept { position: absolute; left: 10px; bottom: 10px; width: 76px; height: 76px; border: 2px solid #ece5d1; border-radius: 6px; overflow: visible; box-shadow: 0 6px 16px #000b }
+.mept svg { width: 100%; height: 100%; display: block; border-radius: 4px }
+.dmg { position: absolute; top: -6px; right: -6px; background: var(--seal); color: #fff; font-size: .95rem; padding: 1px 7px; border-radius: 3px; animation: pop .6s ease }
+.dmg.me { background: #fff; color: var(--seal) }
+@keyframes pop { 0% { transform: translateY(8px) scale(.6); opacity: 0 } 60% { transform: translateY(-4px) scale(1.15); opacity: 1 } }
+.foe.tg { border-color: #4b3f8f } .tgl { font-style: normal; font-size: .7rem; color: var(--gold); margin-left: auto }
+.chips { display: flex; flex-wrap: wrap; gap: 4px } .chips i { font-style: normal; font-size: .72rem; padding: 1px 6px; border-radius: 3px; background: #2c1f45; color: #cbb9ff }
+.chips i.good { background: #1d3a2c; color: #9fe0b8 }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 6px }
+.link { background: none; border: 0; color: var(--gold); text-decoration: underline; padding: 0; text-align: left; font-size: .85rem }
+details summary.gap { cursor: pointer }
+.clog .out { color: #ffd27a } .clog .in { color: #ff9a9a }
+.hist { font-size: .78rem; color: var(--mist) } .hist summary { cursor: pointer } .hr { border-top: 1px solid var(--line); padding: 6px 0 } .hr b { color: var(--paper) }
+.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 7; background: #0b0c12f5; border-top: 1px solid var(--line);
+  padding: 8px max(12px, env(safe-area-inset-left, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-right, 0px)); max-height: 46vh; overflow-y: auto }
+.dock > * { max-width: 660px; margin-left: auto; margin-right: auto }
+.dock .ready { font-size: .76rem; margin-bottom: 6px } .dock .ready b { color: var(--paper); font-weight: 600 }
+.seg { display: flex; gap: 4px; margin-bottom: 8px } .seg button { flex: 1; background: var(--ink-2); border: 1px solid var(--line); border-radius: 3px; padding: 6px; font-size: .85rem; color: var(--mist) }
+.seg button.on { border-color: var(--gold); color: var(--paper) }
+.dock .acts { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+.act .fx { color: #cbb9ff }
+@media (min-width: 560px) { .dock .acts { grid-template-columns: repeat(3, minmax(0, 1fr)) } }
+@media (max-width: 420px) { .fpt { width: 72px; height: 72px } .mept { width: 60px; height: 60px } .foes { top: 30px } }
+
+/* ===== Cửa hàng, đột phá ===== */
+.wallet { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; font-size: 1rem } .wallet b { color: var(--gold) }
+.buy { white-space: nowrap; min-width: 92px }
+.rankup { margin-top: 10px; background: linear-gradient(160deg, #2a1d4d, var(--ink-2)); border: 1px solid var(--gold); border-radius: 4px; padding: 18px 16px }
+.rankup h2 { font-family: var(--display); margin: 0 0 10px; font-size: 1.5rem; color: var(--gold) }
+.pickable { cursor: pointer } .pickable:hover { border-color: var(--gold) }

@@ -99,6 +99,14 @@
         ${Array.from({ length: 12 }, (_, i) => `<path d="M${i * 52} 180 L${i * 52 - 30} 220" stroke="#1a110a" stroke-width="2"/>`).join("")}
         ${[110, 140, 450, 480].map((x) => `<rect x="${x}" y="60" width="12" height="44" fill="#e9e2cf"/><rect x="${x + 2}" y="66" width="8" height="2" fill="#c33"/><rect x="${x + 2}" y="72" width="8" height="18" fill="#c33" opacity=".35"/>`).join("")}
         <path d="M300 36 L300 70" stroke="#1a110a" stroke-width="2"/><ellipse cx="300" cy="86" rx="16" ry="20" fill="#e9a443"/><ellipse cx="300" cy="86" rx="40" ry="40" fill="#ffcf70" opacity=".12"/>`;
+      case "sewer": return `<rect x="0" y="0" width="600" height="220" fill="#0b0f0e"/>${[0, 1, 2].map((i) => `<path d="M${60 + i * 170} 220 L${60 + i * 170} 90 Q${145 + i * 170} 10 ${230 + i * 170} 90 L${230 + i * 170} 220" fill="none" stroke="#2a3330" stroke-width="14"/>`).join("")}
+        <rect x="0" y="180" width="600" height="40" fill="#14211e"/><path d="M0 196 Q150 188 300 196 T600 196" stroke="#3f6b5e" stroke-width="2" fill="none" opacity=".6"/>
+        <rect x="0" y="40" width="600" height="8" fill="#1d2523"/><circle cx="300" cy="60" r="5" fill="#cfe9a8" opacity=".5"/><path d="M300 65 L250 180 L350 180 Z" fill="#cfe9a8" opacity=".05"/>`;
+      case "forest": { const r = rng(17); let s = ""; for (let i = 0; i < 22; i++) { const x = r() * 620 - 10, h = 90 + r() * 110, w = 26 + r() * 30; s += `<path d="M${x} 200 L${x + w / 2} ${200 - h} L${x + w} 200 Z" fill="${c}" opacity="${0.75 + r() * 0.25}"/><rect x="${x + w / 2 - 2}" y="196" width="4" height="8" fill="${c}"/>`; } return s + ground; }
+      case "river": return `<rect x="0" y="150" width="600" height="50" fill="${t === "day" ? "#6e9fc4" : t === "dusk" ? "#b0684f" : "#18223a"}" opacity=".85"/>
+        <path d="M0 165 Q150 160 300 166 T600 164 M0 180 Q150 176 300 182 T600 178" stroke="#fff" stroke-width="1" opacity=".3" fill="none"/>
+        <path d="M0 150 L600 150 L600 140 Q300 128 0 140 Z" fill="${c}"/><path d="M380 150 L380 112 L600 112 L600 150" fill="none" stroke="${c}" stroke-width="5"/>${[400, 440, 480, 520, 560].map((x) => `<rect x="${x}" y="112" width="3" height="38" fill="${c}"/>`).join("")}
+        <rect x="0" y="198" width="600" height="22" fill="${c}"/>`;
       case "morgue": return `<rect x="0" y="0" width="600" height="220" fill="#0e1418"/>${Array.from({ length: 4 }, (_, j) => Array.from({ length: 6 }, (_, i) => `<rect x="${330 + i * 42}" y="${40 + j * 36}" width="38" height="32" fill="#28323a" stroke="#3b4752"/><rect x="${343 + i * 42}" y="${54 + j * 36}" width="12" height="3" fill="#7a8894"/>`).join("")).join("")}
         <rect x="60" y="150" width="200" height="12" fill="#3b4752"/><rect x="70" y="162" width="6" height="40" fill="#3b4752"/><rect x="244" y="162" width="6" height="40" fill="#3b4752"/><path d="M70 150 Q160 128 250 150 Z" fill="#dfe6ea"/>
         <path d="M160 0 L160 30" stroke="#3b4752" stroke-width="2"/><path d="M140 30 L180 30 L172 40 L148 40 Z" fill="#3b4752"/><path d="M148 40 L80 150 L240 150 L172 40 Z" fill="#d9f0ff" opacity=".08"/>`;
@@ -108,10 +116,11 @@
 
   CD.ART = {
     TIME_LABEL,
-    env(id) { return ENV[id] || { t: "night", p: "school" }; },
-    cast(id) { return CAST[id] || []; },
-    backdrop(id) {
-      const { t, p } = this.env(id), k = "sky" + ++uid, r = rng(5);
+    env(id) { const sc = CD.SCENES && CD.SCENES[id]; if (sc && sc.env) { const [t, p] = sc.env.split("/"); return { t, p }; } return ENV[id] || { t: "night", p: "school" }; },
+    cast(id) { const sc = CD.SCENES && CD.SCENES[id]; return (sc && sc.cast) || CAST[id] || []; },
+    envOf(t, p) { return { t, p }; },
+    backdrop(id, override) {
+      const { t, p } = override || this.env(id), k = "sky" + ++uid, r = rng(5);
       let s = `<svg class="bg" viewBox="0 0 600 220" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${TIME_LABEL[t]}">
         <defs><linearGradient id="${k}" x1="0" y1="0" x2="0" y2="1">${SKY[t].map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join("")}</linearGradient>
         <radialGradient id="${k}g"><stop offset="0" stop-color="#fff3c4" stop-opacity=".8"/><stop offset="1" stop-color="#fff3c4" stop-opacity="0"/></radialGradient></defs>
@@ -194,4 +203,42 @@
       <ellipse cx="46" cy="46" rx="14" ry="17" fill="#d9d9e0"/><ellipse cx="41" cy="44" rx="3.5" ry="5" fill="#0a0a10"/><ellipse cx="51" cy="44" rx="3.5" ry="5" fill="#0a0a10"/><ellipse cx="46" cy="56" rx="4" ry="5" fill="#0a0a10"/>
       <path d="M32 34 Q30 20 44 26 Q52 18 60 30" stroke="#1a1a22" stroke-width="3" fill="none"/>`,
   };
+  /* Chú linh nguyên bản bổ sung (Arc 1–3) */
+  const twisted = (skin, extra) => `<path d="M30 96 C26 76 34 60 44 52 C40 40 46 28 56 28 C68 28 72 42 64 52 C76 60 80 78 72 96 Z" fill="${skin}"/>
+      <path d="M44 56 C30 54 20 62 14 74 M64 58 C78 50 86 40 90 28" stroke="${skin}" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <ellipse cx="53" cy="38" rx="3" ry="5" fill="#120812" transform="rotate(-20 53 38)"/><ellipse cx="61" cy="41" rx="2" ry="3.5" fill="#120812"/><path d="M50 47 Q56 52 62 46" stroke="#120812" stroke-width="2" fill="none"/>
+      <path d="M40 66 Q50 72 60 64 M36 80 Q50 86 66 78" stroke="#00000055" stroke-width="2" fill="none"/>${extra || ""}`;
+  Object.assign(CURSE_ART, {
+    c_doll: `<rect x="42" y="16" width="16" height="16" rx="3" fill="#a07a4c"/><circle cx="47" cy="23" r="1.6" fill="#1a110a"/><circle cx="53" cy="23" r="1.6" fill="#1a110a"/>
+      <rect x="36" y="34" width="28" height="30" rx="4" fill="#8b6a40"/><path d="M36 38 L20 54 M64 38 L80 30" stroke="#8b6a40" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="80" cy="28" r="6" fill="#a07a4c"/><path d="M42 64 L38 92 M58 64 L62 92" stroke="#8b6a40" stroke-width="8" stroke-linecap="round"/>
+      <rect x="44" y="40" width="12" height="16" fill="#e9e2cf"/><path d="M47 44 L53 44 M47 48 L53 48" stroke="#cc3640" stroke-width="1.5"/>`,
+    c_alley: `<rect x="0" y="0" width="100" height="100" fill="#000" opacity=".35"/><path d="M14 92 C14 60 30 34 50 34 C70 34 86 60 86 92 Z" fill="#1a1222"/>
+      <circle cx="40" cy="56" r="5" fill="#e8d36a"/><circle cx="60" cy="56" r="5" fill="#e8d36a"/><ellipse cx="40" cy="56" rx="1.2" ry="4" fill="#000"/><ellipse cx="60" cy="56" rx="1.2" ry="4" fill="#000"/>
+      <path d="M36 70 L42 76 L48 70 L54 76 L60 70 L64 74" stroke="#f1ead8" stroke-width="2" fill="none"/><path d="M20 40 L14 26 M80 40 L88 26" stroke="#1a1222" stroke-width="5" stroke-linecap="round"/>`,
+    c_school: `<rect x="18" y="64" width="64" height="6" fill="#7a5a36"/><rect x="22" y="70" width="5" height="24" fill="#7a5a36"/><rect x="73" y="70" width="5" height="24" fill="#7a5a36"/>
+      <path d="M30 64 C26 40 36 20 50 20 C64 20 74 40 70 64 Z" fill="#3c2c4a"/>${[34, 42, 50, 58, 66].map((x, i) => `<path d="M${x} ${30 + (i % 2) * 6} L${x + 4} ${34 + (i % 2) * 6}" stroke="#e9e2cf" stroke-width="1.2"/>`).join("")}
+      <circle cx="44" cy="40" r="4" fill="#cc3640"/><circle cx="56" cy="40" r="4" fill="#cc3640"/><path d="M42 52 Q50 58 58 52" stroke="#e9e2cf" stroke-width="2" fill="none"/>
+      <text x="50" y="62" text-anchor="middle" font-family="'Times New Roman', serif" font-size="7" fill="#e9e2cf" opacity=".7">CHẾT ĐI</text>`,
+    c_kaihen: twisted("#b49a9a"),
+    c_kaihen2: twisted("#a78d9a", `<ellipse cx="38" cy="44" rx="9" ry="10" fill="#a78d9a"/><circle cx="35" cy="42" r="2" fill="#120812"/><circle cx="41" cy="43" r="2" fill="#120812"/><path d="M34 49 Q38 52 42 49" stroke="#120812" stroke-width="1.5" fill="none"/>`),
+    c_kaihen_big: `<rect x="0" y="0" width="100" height="100" fill="#000" opacity=".2"/><path d="M8 100 C6 64 22 40 50 40 C78 40 94 64 92 100 Z" fill="#9c8484"/>
+      <ellipse cx="50" cy="30" rx="13" ry="12" fill="#9c8484"/><circle cx="45" cy="29" r="2.2" fill="#120812"/><circle cx="56" cy="31" r="1.6" fill="#120812"/><path d="M44 37 L56 37" stroke="#120812" stroke-width="1.5"/>
+      <path d="M14 64 C2 76 4 92 10 100 M86 64 C98 76 96 92 90 100" stroke="#9c8484" stroke-width="12" fill="none" stroke-linecap="round"/>
+      <path d="M30 60 Q50 70 70 60 M24 78 Q50 90 76 78" stroke="#00000044" stroke-width="3" fill="none"/><rect x="40" y="46" width="20" height="8" fill="#2c3045" opacity=".7"/>`,
+    c_pool: `<rect x="0" y="62" width="100" height="38" fill="#2c6b6a"/><path d="M0 66 Q25 60 50 66 T100 66" stroke="#9fd6cf" stroke-width="1.5" fill="none" opacity=".6"/>
+      <path d="M36 66 C34 44 40 26 50 26 C60 26 66 44 64 66 Z" fill="#e6eef0"/><path d="M40 28 C36 40 34 56 30 66 M60 28 C64 40 66 56 70 66" stroke="#1d2a33" stroke-width="3" fill="none"/>
+      <ellipse cx="45" cy="40" rx="3" ry="4" fill="#0a0a10"/><ellipse cx="55" cy="40" rx="3" ry="4" fill="#0a0a10"/><path d="M46 52 Q50 50 54 52" stroke="#0a0a10" stroke-width="1.5" fill="none"/>
+      <path d="M64 58 C76 50 84 40 86 30" stroke="#e6eef0" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M83 30 L80 22 M86 30 L87 21 M89 31 L93 24" stroke="#e6eef0" stroke-width="2"/>`,
+    c_tunnel: `<rect x="0" y="0" width="100" height="100" fill="#000" opacity=".35"/><path d="M10 100 L10 46 Q50 6 90 46 L90 100" fill="none" stroke="#2a3330" stroke-width="6"/>
+      <path d="M22 100 L22 58 Q50 30 78 58 L78 100 Z" fill="#20151c"/><circle cx="38" cy="62" r="9" fill="#fff6c8"/><circle cx="62" cy="62" r="9" fill="#fff6c8"/><circle cx="38" cy="62" r="4" fill="#cc3640"/><circle cx="62" cy="62" r="4" fill="#cc3640"/>
+      <path d="M32 80 L68 80 L64 90 L36 90 Z" fill="#0a0a10"/>${[38, 44, 50, 56, 62].map((x) => `<path d="M${x} 80 L${x + 2} 86 L${x + 4} 80" fill="#e9e2cf"/>`).join("")}<path d="M0 96 L100 96" stroke="#5a6170" stroke-width="3"/>`,
+    c_hoa: `<path d="M50 96 C48 80 52 70 50 58" stroke="#3f6b3a" stroke-width="6" fill="none"/><path d="M50 80 C36 74 26 80 20 90 M50 74 C64 66 76 70 82 80" stroke="#3f6b3a" stroke-width="4" fill="none"/>
+      ${[0, 72, 144, 216, 288].map((a) => `<ellipse cx="50" cy="28" rx="10" ry="20" fill="#c25a7c" transform="rotate(${a} 50 44)"/>`).join("")}<circle cx="50" cy="44" r="12" fill="#2a1424"/>
+      <circle cx="46" cy="42" r="2.4" fill="#e8d36a"/><circle cx="54" cy="42" r="2.4" fill="#e8d36a"/><path d="M44 50 L47 47 L50 50 L53 47 L56 50" stroke="#f1ead8" stroke-width="1.5" fill="none"/>
+      <path d="M14 96 C20 86 22 78 30 76 M86 96 C82 86 78 80 70 78" stroke="#5b3e22" stroke-width="3" fill="none"/>`,
+    c_cap2_trial: `${Array.from({ length: 14 }, (_, i) => { const a = (i / 14) * Math.PI * 2, x = 50 + Math.cos(a) * 44, y = 52 + Math.sin(a) * 40; return `<path d="M50 52 L${x.toFixed(1)} ${y.toFixed(1)}" stroke="#d9d0c4" stroke-width="2.5"/><path d="M${x.toFixed(1)} ${y.toFixed(1)} l${(Math.cos(a + 0.6) * 5).toFixed(1)} ${(Math.sin(a + 0.6) * 5).toFixed(1)} M${x.toFixed(1)} ${y.toFixed(1)} l${(Math.cos(a - 0.6) * 5).toFixed(1)} ${(Math.sin(a - 0.6) * 5).toFixed(1)}" stroke="#d9d0c4" stroke-width="1.5"/>`; }).join("")}
+      <circle cx="50" cy="52" r="18" fill="#3a1f2c"/><ellipse cx="50" cy="48" rx="9" ry="6" fill="#efd6d6"/><circle cx="50" cy="48" r="4" fill="#b3121e"/><circle cx="50" cy="48" r="1.6" fill="#000"/>
+      <path d="M40 60 Q50 66 60 60" stroke="#efd6d6" stroke-width="2" fill="none"/><path d="M6 20 L94 84 M6 84 L94 20" stroke="#8b8f9c" stroke-width="2" stroke-dasharray="4 3" opacity=".6"/>`,
+  });
 })(typeof window !== "undefined" ? window : globalThis);
