@@ -1,0 +1,292 @@
+<title>Cursed Destiny</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one narrow reading column, a talisman-paper scene card over ink-dark ground, stats rail on top */
+:root{
+  --ink:#0d0e14; --ink-2:#161823; --line:#2a2d3d;
+  --paper:#e9e2cf; --mist:#9a9db0; --seal:#c8323a; --curse:#7b5cff; --gold:#d6b25e;
+  --display:"Playfair Display", Georgia, "Times New Roman", serif;
+  --body:"Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--ink);color:var(--paper);font-family:var(--body);font-size:16px;line-height:1.65;
+  background-image:radial-gradient(ellipse at 50% -10%, #2a1d4d55, transparent 60%);}
+.wrap{max-width:640px;margin:0 auto;padding-block:20px 48px;
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:18px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:900;font-size:1.6rem;letter-spacing:.01em;margin:0;text-wrap:balance}
+h1 span{color:var(--seal)}
+.menu{display:flex;gap:8px}
+button{font:inherit;cursor:pointer}
+.ghost{background:transparent;border:1px solid var(--line);color:var(--mist);padding:6px 12px;border-radius:4px;font-size:.85rem}
+.ghost:hover,.ghost:focus-visible{border-color:var(--gold);color:var(--paper);outline:none}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat{background:var(--ink-2);border:1px solid var(--line);border-radius:4px;padding:8px 10px;min-width:0}
+.stat b{display:block;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--mist);font-weight:600}
+.stat i{font-style:normal;font-family:var(--mono);font-size:1.05rem;font-variant-numeric:tabular-nums}
+.stat.hp i{color:var(--seal)} .stat.cl i{color:var(--curse)}
+.bump{animation:bump .5s}
+@keyframes bump{30%{color:var(--gold);transform:scale(1.15)}}
+.scene{position:relative;background:var(--paper);color:#1b1a20;border-radius:2px;padding:26px 22px 22px;
+  box-shadow:0 18px 40px #0008}
+.scene::before{content:"";position:absolute;top:0;bottom:0;left:0;width:6px;background:repeating-linear-gradient(var(--seal) 0 14px,transparent 14px 20px)}
+.chapter{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--seal);margin:0 0 6px}
+.scene h2{font-family:var(--display);font-size:1.45rem;line-height:1.2;margin:0 0 12px;text-wrap:balance}
+.text p{margin:0 0 .8em;max-width:65ch}
+.text p.say{font-style:italic;border-left:2px solid #c8323a66;padding-left:10px}
+.choices{display:flex;flex-direction:column;gap:10px}
+.choice{text-align:left;background:var(--ink-2);color:var(--paper);border:1px solid var(--line);border-radius:4px;padding:12px 14px;
+  display:flex;justify-content:space-between;gap:12px;align-items:center;transition:border-color .15s, transform .15s}
+.choice:hover,.choice:focus-visible{border-color:var(--curse);transform:translateX(3px);outline:none}
+.choice[disabled]{opacity:.4;cursor:not-allowed;transform:none}
+.choice small{font-family:var(--mono);font-size:.7rem;color:var(--gold);white-space:nowrap}
+.log{font-family:var(--mono);font-size:.8rem;color:var(--mist);min-height:1.2em}
+.combat{display:grid;gap:10px;margin-top:6px}
+.bar{height:8px;background:#0002;border-radius:4px;overflow:hidden}
+.bar>div{height:100%;background:var(--seal);transition:width .4s}
+.foe{display:flex;justify-content:space-between;font-weight:600}
+.panel{background:var(--ink-2);border:1px solid var(--line);border-radius:4px;padding:16px;display:grid;gap:10px}
+.panel h3{margin:0;font-family:var(--display)}
+.slot{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.slot span{flex:1;min-width:0;color:var(--mist);font-size:.85rem}
+.skip{font-size:.75rem;color:var(--mist);text-align:right}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:420px){.stats{grid-template-columns:repeat(2,1fr)}.scene{padding:22px 16px 18px}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Cursed <span>Destiny</span></h1>
+    <div class="menu">
+      <button class="ghost" id="btnSave">Lưu / Tải</button>
+      <button class="ghost" id="btnNew">Chơi lại</button>
+    </div>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="panel" id="savePanel" hidden>
+    <h3>Ô lưu game</h3>
+    <div id="slots"></div>
+    <button class="ghost" id="btnClose">Đóng</button>
+  </div>
+
+  <article class="scene">
+    <p class="chapter" id="chapter"></p>
+    <h2 id="title"></h2>
+    <div class="text" id="text"></div>
+  </article>
+
+  <div class="log" id="log"></div>
+  <div class="choices" id="choices"></div>
+  <div class="skip">Chạm vào trang giấy để hiện chữ nhanh</div>
+</div>
+
+<script>
+/* ===== NỘI DUNG GAME =====
+   Mỗi cảnh: chapter, title, text[] (dòng bắt đầu bằng ">" là lời thoại),
+   choices[]: { t: chữ, go: cảnh tiếp, eff: {chỉ số:+n}, req: {chỉ số:n}, flag: "tên" }
+   combat: { name, hp, atk, win, lose }  — cảnh chiến đấu theo lượt */
+const SCENES = {
+  start:{chapter:"Mở đầu · Trường trung học Kōsen",title:"Tiếng gõ trong tủ đồ",
+    text:["Đã gần bảy giờ tối. Shen ở lại trực nhật, cả dãy hành lang chỉ còn tiếng quạt trần.",
+      "Rồi có tiếng gõ. Đều đặn, chậm rãi, phát ra từ chiếc tủ đồ số 44, cái tủ mà cả lớp đồn là không ai dám mở.",
+      "Từ khe cửa rỉ ra một vệt khói đen, đặc như mực, và nó đang bò về phía chân cậu."],
+    choices:[
+      {t:"Mở tủ ra xem",go:"open",eff:{chuluc:1}},
+      {t:"Lùi lại, quan sát thật kỹ",go:"observe",eff:{tritue:1}},
+      {t:"Bỏ chạy khỏi lớp",go:"run",eff:{theluc:1}}]},
+
+  open:{chapter:"Mở đầu",title:"Thứ bên trong",
+    text:["Cánh tủ bật tung. Bên trong không có gì, chỉ có một con mắt to bằng nắm tay, đỏ ngầu, dán chặt vào vách tôn.",
+      "Con mắt chớp một lần. Cả căn phòng lạnh đi như mùa đông.",
+      "Đầu Shen nhói lên. Lòng bàn tay cậu nóng rực, như có thứ gì đó vừa thức dậy."],
+    choices:[{t:"Đấm thẳng vào con mắt",go:"fight1",eff:{chuluc:1}},
+      {t:"Đóng sầm cửa tủ lại",go:"observe"}]},
+
+  observe:{chapter:"Mở đầu",title:"Nhìn thấy điều không nên thấy",
+    text:["Shen nheo mắt. Khói đen không lan ngẫu nhiên, nó đi theo bóng tối dưới bàn ghế, né hẳn chỗ có ánh đèn.",
+      "Cậu để ý một thứ khác: một mảnh giấy cũ dán dưới đáy tủ, chữ viết tay đã nhòe. Một lá bùa.",
+      "Lá bùa đang bong ra từng góc một."],
+    choices:[{t:"Bật hết đèn trong lớp",go:"light",eff:{tritue:1},flag:"biet_anh_sang"},
+      {t:"Ấn lá bùa dán lại",go:"talisman",req:{tritue:1},eff:{chuluc:1},flag:"cham_bua"},
+      {t:"Đứng chắn trước cửa tủ",go:"fight1"}]},
+
+  run:{chapter:"Mở đầu",title:"Hành lang dài vô tận",
+    text:["Shen chạy. Nhưng hành lang cứ kéo dài mãi, cánh cửa thoát hiểm ở cuối không hề gần lại.",
+      "Sau lưng, tiếng gõ biến thành tiếng cào.",
+      "Cậu hiểu ra một điều đáng sợ: thứ đó không định để cậu đi."],
+    choices:[{t:"Quay lại đối mặt",go:"fight1",eff:{chuluc:1}},
+      {t:"Đập vỡ cửa sổ, nhảy ra ngoài",go:"window",req:{theluc:1},eff:{theluc:1}}]},
+
+  light:{chapter:"Mở đầu",title:"Ánh sáng",
+    text:["Đèn huỳnh quang bật lên từng dãy. Khói đen co rúm lại, rít lên như nước đổ vào chảo dầu.",
+      "Nó yếu đi rõ rệt. Nhưng nó vẫn còn đó, và giờ nó đã giận."],
+    choices:[{t:"Chiến đấu",go:"fight1"}]},
+
+  talisman:{chapter:"Mở đầu",title:"Chú lực đầu tiên",
+    text:["Ngón tay Shen chạm vào lá bùa. Một luồng điện chạy dọc cánh tay, nóng như kim loại nung.",
+      "Lá bùa sáng lên. Không phải vì nó mạnh, mà vì cậu vừa truyền vào nó thứ gì đó từ chính mình.",
+      "> Mày... thấy được tao à?",
+      "Giọng nói vang lên từ trong tủ. Lá bùa cháy thành tro."],
+    choices:[{t:"Chiến đấu",go:"fight1"}]},
+
+  window:{chapter:"Mở đầu",title:"Tầng hai",
+    text:["Kính vỡ. Shen lăn xuống mái hiên, rơi xuống bãi cỏ, đau ê ẩm nhưng còn nguyên vẹn.",
+      "Ngước lên, cậu thấy khói đen tràn ra khung cửa sổ, ngưng lại thành một hình người không có mặt.",
+      "Nó nhảy theo."],
+    choices:[{t:"Chiến đấu",go:"fight1"}]},
+
+  fight1:{chapter:"Trận đầu",title:"Chú linh cấp 4",
+    text:["Khói đen tụ lại thành một cái miệng đầy răng. Không còn đường lùi."],
+    combat:{name:"Chú linh tủ đồ",hp:22,atk:[2,5],win:"after",lose:"down"}},
+
+  down:{chapter:"Trận đầu",title:"Bóng tối",
+    text:["Shen ngã xuống. Thế giới mờ dần.",
+      "Trước khi mất ý thức, cậu thấy một vệt sáng xanh xé đôi chú linh, và một bóng người cao lớn đứng giữa lớp học.",
+      "> Ồ. Vẫn còn sống à. Nhóc này có chút thú vị đấy."],
+    choices:[{t:"Tỉnh dậy",go:"after",eff:{hp:10}}]},
+
+  after:{chapter:"Kết mở đầu",title:"Người đàn ông bịt mắt",
+    text:["Khi bụi lắng xuống, trong lớp có thêm một người. Tóc trắng, mắt bịt băng đen, tay đút túi như vừa đi dạo ngang qua.",
+      "> Chú linh cấp 4 thôi, nhưng nhóc nhìn thấy nó, chạm được vào nó. Chuyện đó người thường không làm được đâu.",
+      "> Có hai lựa chọn. Một là quên hết chuyện tối nay. Hai là theo tôi tới Cao đẳng Chú thuật Tokyo.",
+      "Lòng bàn tay Shen vẫn còn nóng."],
+    choices:[{t:"Đi theo anh ta",go:"end_prologue",eff:{chuluc:1}},
+      {t:"Hỏi: \"Tại sao lại là tôi?\"",go:"why",eff:{tritue:1}}]},
+
+  why:{chapter:"Kết mở đầu",title:"Câu hỏi đúng",
+    text:["> Câu hỏi hay. Vì chú lực của nhóc không giống ai cả. Tôi muốn biết nó là gì.",
+      "> Và vì nếu không ai dạy nhóc dùng nó, sớm muộn nó sẽ dùng nhóc."],
+    choices:[{t:"Đồng ý",go:"end_prologue"}]},
+
+  end_prologue:{chapter:"Hết phần mở đầu",title:"Còn tiếp: Arc Thai nhi Chú vật",
+    text:["Shen bước ra khỏi cổng trường lần cuối với tư cách một học sinh bình thường.",
+      "Phía trước là Cao đẳng Chú thuật, những người bạn cùng lứa và một thuật thức chưa ai đặt tên.",
+      "Đây là cuối bản dựng thử. Các arc tiếp theo sẽ được thêm vào."],
+    choices:[{t:"Chơi lại từ đầu",go:"__new"}]}
+};
+
+/* ===== LÕI GAME ===== */
+const STAT_LABEL={hp:"Máu",chuluc:"Chú lực",theluc:"Thể chất",tritue:"Trí tuệ"};
+const fresh=()=>({scene:"start",stats:{hp:30,chuluc:1,theluc:1,tritue:1},flags:[],day:1});
+let S=fresh(), typing=null, combat=null;
+
+const $=id=>document.getElementById(id);
+const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}};
+
+function renderStats(changed=[]){
+  $("stats").innerHTML=Object.keys(STAT_LABEL).map(k=>
+    `<div class="stat ${k==="hp"?"hp":k==="chuluc"?"cl":""}"><b>${STAT_LABEL[k]}</b><i class="${changed.includes(k)?"bump":""}">${S.stats[k]}</i></div>`).join("");
+}
+function applyEff(eff={}){
+  const ch=[],msg=[];
+  for(const[k,v]of Object.entries(eff)){S.stats[k]=Math.max(0,(S.stats[k]||0)+v);ch.push(k);msg.push(`${STAT_LABEL[k]} ${v>0?"+":""}${v}`)}
+  renderStats(ch); if(msg.length) $("log").textContent=msg.join(" · ");
+}
+const meets=req=>!req||Object.entries(req).every(([k,v])=>(S.stats[k]||0)>=v);
+
+function typeText(lines,done){
+  const box=$("text"); box.innerHTML="";
+  const els=lines.map(l=>{const p=document.createElement("p");const say=l.startsWith(">");if(say)p.className="say";p._full=say?l.slice(1).trim():l;box.appendChild(p);return p});
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let i=0,c=0;
+  const finish=()=>{clearInterval(typing);typing=null;els.forEach(p=>p.textContent=p._full);done()};
+  if(reduce){finish();return}
+  typing=setInterval(()=>{
+    if(i>=els.length){finish();return}
+    c+=2; els[i].textContent=els[i]._full.slice(0,c);
+    if(c>=els[i]._full.length){i++;c=0}
+  },16);
+  document.querySelector(".scene").onclick=()=>typing&&finish();
+}
+
+function go(id){
+  if(id==="__new"){S=fresh();renderStats();$("log").textContent="";id="start"}
+  S.scene=id; const sc=SCENES[id];
+  $("chapter").textContent=sc.chapter; $("title").textContent=sc.title;
+  $("choices").innerHTML="";
+  typeText(sc.text,()=>sc.combat?startCombat(sc.combat):showChoices(sc.choices));
+  store.set("cd_auto",S);
+}
+function showChoices(list){
+  const box=$("choices"); box.innerHTML="";
+  list.forEach(ch=>{
+    const b=document.createElement("button"); b.className="choice";
+    const ok=meets(ch.req);
+    const tag=ch.req?Object.entries(ch.req).map(([k,v])=>`Cần ${STAT_LABEL[k]} ${v}`).join(", "):"";
+    b.innerHTML=`<span>${ch.t}</span>${tag?`<small>${tag}</small>`:""}`;
+    b.disabled=!ok;
+    b.onclick=()=>{applyEff(ch.eff);if(ch.flag&&!S.flags.includes(ch.flag))S.flags.push(ch.flag);go(ch.go)};
+    box.appendChild(b);
+  });
+  box.querySelector("button:not([disabled])")?.focus({preventScroll:true});
+}
+
+/* Chiến đấu theo lượt */
+function startCombat(cfg){
+  let foeHp=cfg.hp;
+  if(cfg.name.includes("tủ")&&S.flags.includes("biet_anh_sang")) foeHp-=6;
+  combat={...cfg,foeHp,max:cfg.hp,guard:false};
+  drawCombat("Chú linh lao tới!");
+}
+function drawCombat(msg){
+  const c=combat,box=$("choices");
+  box.innerHTML=`<div class="panel combat">
+    <div class="foe"><span>${c.name}</span><span style="font-family:var(--mono)">${Math.max(0,c.foeHp)}/${c.max}</span></div>
+    <div class="bar"><div style="width:${Math.max(0,c.foeHp)/c.max*100}%"></div></div>
+    <div class="log">${msg}</div></div>`;
+  const acts=[
+    {t:"Đánh bằng tay không",f:()=>dmg(3+S.stats.theluc*2)},
+    {t:"Dồn chú lực vào nắm đấm",cost:2,f:()=>dmg(5+S.stats.chuluc*3)},
+    {t:"Phòng thủ, tìm sơ hở",f:()=>{c.guard=true;return"Shen thủ thế, quan sát chuyển động của nó."}}];
+  acts.forEach(a=>{
+    const b=document.createElement("button");b.className="choice";
+    b.innerHTML=`<span>${a.t}</span>${a.cost?`<small>Tốn ${a.cost} Máu</small>`:""}`;
+    b.disabled=a.cost&&S.stats.hp<=a.cost;
+    b.onclick=()=>{ if(a.cost){S.stats.hp-=a.cost} turn(a.f()) };
+    box.appendChild(b);
+  });
+}
+function dmg(n){const r=n+Math.floor(Math.random()*3);combat.foeHp-=r;return`Shen gây ${r} sát thương.`}
+function turn(msg){
+  const c=combat;
+  if(c.foeHp<=0){combat=null;applyEff({chuluc:1});$("log").textContent="Chiến thắng! Chú lực +1";go(c.win);return}
+  let hit=c.atk[0]+Math.floor(Math.random()*(c.atk[1]-c.atk[0]+1)) - Math.floor(S.stats.theluc/2);
+  if(c.guard){hit=Math.max(0,Math.floor(hit/3));c.guard=false;c.foeHp-=S.stats.tritue;msg+=` Phản đòn ${S.stats.tritue}.`}
+  hit=Math.max(0,hit); S.stats.hp-=hit; renderStats(["hp"]);
+  if(S.stats.hp<=0){S.stats.hp=0;combat=null;go(c.lose);return}
+  drawCombat(`${msg} Nó đánh trả ${hit}.`);
+}
+
+/* Lưu / tải */
+function drawSlots(){
+  $("slots").innerHTML=[1,2,3].map(n=>{
+    const d=store.get("cd_slot"+n);
+    return`<div class="slot"><span>Ô ${n}: ${d?SCENES[d.scene].title:"Trống"}</span>
+      <button class="ghost" data-s="${n}">Lưu</button><button class="ghost" data-l="${n}" ${d?"":"disabled"}>Tải</button></div>`}).join("");
+  $("slots").querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{
+    const ok=store.set("cd_slot"+b.dataset.s,S);$("log").textContent=ok?`Đã lưu vào ô ${b.dataset.s}`:"Trình duyệt chặn lưu dữ liệu, không lưu được.";drawSlots()});
+  $("slots").querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>{
+    const d=store.get("cd_slot"+b.dataset.l);if(!d)return;S=d;combat=null;renderStats();$("savePanel").hidden=true;go(S.scene)});
+}
+$("btnSave").onclick=()=>{drawSlots();$("savePanel").hidden=!$("savePanel").hidden};
+$("btnClose").onclick=()=>$("savePanel").hidden=true;
+$("btnNew").onclick=()=>go("__new");
+
+/* Khởi động */
+function start(data){
+  const saved=data&&data.S||store.get("cd_auto");
+  if(saved&&SCENES[saved.scene]&&!SCENES[saved.scene].combat)S=saved;
+  renderStats(); go(S.scene);
+}
+window.claude?.hot?.snapshot?.(()=>({S}));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
