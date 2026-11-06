@@ -1,5 +1,5 @@
 /* Chạy: node tests/engine.test.js  — unit test công thức + chơi thử tự động toàn bộ Arc 1 */
-require("../js/data.js"); require("../js/world.js"); require("../js/gear.js"); require("../js/domain.js"); require("../js/story.js"); require("../js/story2.js"); require("../js/arc456.js"); require("../js/engine.js");
+require("../js/data.js"); require("../js/world.js"); require("../js/gear.js"); require("../js/domain.js"); require("../js/story.js"); require("../js/story2.js"); require("../js/arc456.js"); require("../js/arc7_12.js"); require("../js/engine.js");
 const CD = globalThis.CD;
 let pass = 0, fail = 0, D2;
 const eq = (name, a, b) => { if (JSON.stringify(a) === JSON.stringify(b)) pass++; else { fail++; console.log("FAIL", name, "→", a, "≠", b); } };
@@ -129,10 +129,13 @@ ok("8 lãnh địa cho 8 thuật thức", Object.keys(CD.DATA.TECHNIQUES).every(
 /* ---- Chơi thử tự động qua 3 arc ---- */
 function rngFrom(seed) { let x = seed >>> 0 || 1; return () => ((x ^= x << 13), (x ^= x >>> 17), (x ^= x << 5), (x >>> 0) / 4294967296); }
 function bot(s, c) {
+  if (CD.canDomain && CD.canDomain(s, c) && c.enemies.some((e) => e.d.maxHP > 2000 || /Kenjaku|Ma Hư La|Quan Sát|Uraume|Rensei|Iwakura/.test(e.name))) return { type: "domain" };
   const ready = CD.combat.ready(s, c).filter((x) => !x.cd && CD.combat.affordable(s, x.sk) && x.sk.effect && (x.sk.effect.dmg || x.sk.effect.stun || x.sk.effect.mark));
   const d = CD.derived(s);
   const pot = ["dan_he", "thuoc_ieiri", "bang_gac"].find((id) => s.inventory.find((x) => x.id === id));
   if (s.cur.hp < d.maxHP * 0.3 && pot) return { type: "item", id: pot };
+  ready.forEach((x) => (x.score = (x.sk.effect.dmg ? x.sk.effect.dmg.mult * (x.sk.effect.hits || 1) : 0) * (x.sk.tech && c.burn > 0 ? 0 : 1)));
+  ready.sort((a, b) => b.score - a.score); if (ready.length && ready[0].score > 0) return { type: "skill", id: ready[0].id };
   ready.sort((a, b) => (b.sk.effect.dmg ? b.sk.effect.dmg.mult : 0) - (a.sk.effect.dmg ? a.sk.effect.dmg.mult : 0));
   return ready.length ? { type: "skill", id: ready[0].id } : { type: "skill", id: "sk_guard" };
 }
@@ -144,6 +147,10 @@ function fight(s, enemies, opts, rng, txKey, log, label) {
   return c;
 }
 function shopping(s) {
+  const dn = CD.domainNext && CD.domainNext(s); if (dn && dn.ready) CD.unlockDomain(s);
+  const ev = CD.evoNext && CD.evoNext(s); if (ev && ev.rankOk && ev.spOk) CD.evolve(s, ev.hidden && ev.hidden.ok ? "hidden" : 0);
+  if (s.pendingRank) CD.claimRank(s, 0);
+  while (CD.rankCheck(s).can) { CD.tryRankScene(s); if (s.pendingRank) CD.claimRank(s, 0); }
   CD.DATA.SKILL_SHOP.forEach((e) => { if (CD.canLearn(s, e.id).ok) CD.learnSkill(s, e.id); });
   s.skills.forEach((k) => { const c = CD.upgradeCost(s, k); if (c && c.cur === "yen" && s.currency.yen > c.price + 20000) CD.upgradeSkill(s, k); });
   ["tinh_STR", "tinh_VIT", "tinh_INT", "tinh_WIS", "dan_he", "manh_tiem"].forEach((id) => { const r = CD.buy(s, "system", id); if (r.ok && CD.DATA.ITEMS[id].use && !CD.DATA.ITEMS[id].use.hp) CD.useItem(s, id); });
@@ -203,7 +210,10 @@ function playthrough(seed, prefer) {
     } else break;
     CD.enterScene(s, id);
     const errs = CD.validate(s); if (errs.length) { fail++; console.log("VALIDATE", seed, id, errs); break; }
-    if (id === "a6_end") break;
+    if (/^a12_end_/.test(id)) break;
+    if (id === "a6_end") log.lvA6 = s.level, log.rankA6 = s.rank;
+    if (id === "a8_end") log.lvA8 = s.level, log.rankA8 = s.rank;
+    if (id === "a10_end") log.lvA10 = s.level, log.rankA10 = s.rank;
     if (id === "a3_end") log.lvA3 = s.level, log.rankA3 = s.rank;
     if (id === "a5_end" || id === "a5_skip") log.lvA5 = s.level;
     if (id === "a1_end") log.lvA1 = s.level, log.rankA1 = s.rank;
@@ -213,9 +223,12 @@ function playthrough(seed, prefer) {
 }
 const results = [];
 for (let seed = 1; seed <= 120; seed++) results.push(playthrough(seed, seed % 2 ? "first" : "rand"));
-eq("120 lượt chơi đều tới cuối Arc 6", results.filter((r) => r.id === "a6_end").length, 120);
+eq("120 lượt chơi đều tới kết thúc", results.filter((r) => /^a12_end_/.test(r.id)).length, 120);
 const stat = (f) => { const v = results.map(f); return Math.min(...v) + "–" + Math.max(...v); };
-console.log("Lv cuối Arc 1:", stat((r) => r.log.lvA1), "· Arc 2:", stat((r) => r.log.lvA2), "· Arc 3:", stat((r) => r.log.lvA3), "· Arc 5:", stat((r) => r.log.lvA5), "· Arc 6:", stat((r) => r.s.level));
+console.log("Lv cuối Arc 1:", stat((r) => r.log.lvA1), "· Arc 2:", stat((r) => r.log.lvA2), "· Arc 3:", stat((r) => r.log.lvA3), "· Arc 5:", stat((r) => r.log.lvA5), "· Arc 6:", stat((r) => r.log.lvA6), "· Arc 8:", stat((r) => r.log.lvA8), "· Arc 10:", stat((r) => r.log.lvA10), "· Kết:", stat((r) => r.s.level));
+const rk = (k) => { const o = {}; results.forEach((r) => (o[r.log[k] || r.s.rank] = (o[r.log[k] || r.s.rank] || 0) + 1)); return JSON.stringify(o); };
+console.log("Rank cuối Arc 6", rk("rankA6"), "· Arc 8", rk("rankA8"), "· Arc 10", rk("rankA10"), "· Kết", JSON.stringify(results.reduce((o, r) => ((o[r.s.rank] = (o[r.s.rank] || 0) + 1), o), {})));
+console.log("Kết thúc:", JSON.stringify(results.reduce((o, r) => ((o[r.id] = (o[r.id] || 0) + 1), o), {})), "· Nhánh ẩn:", results.filter((r) => r.s.techHidden).length, "· Bậc thuật thức:", JSON.stringify(results.reduce((o, r) => ((o[r.s.techTier] = (o[r.s.techTier] || 0) + 1), o), {})));
 console.log("Rank D cuối Arc 1:", results.filter((r) => r.log.rankA1 === "D").length + "/120 · Rank C cuối Arc 3:", results.filter((r) => r.log.rankA3 === "C").length + "/120 · Rank B cuối Arc 6:", results.filter((r) => r.s.rank === "B").length + "/120");
 const fateCount = {}; results.forEach((r) => Object.entries(r.s.fates).forEach(([k, v]) => { const key = k + ":" + v; fateCount[key] = (fateCount[key] || 0) + 1; })); console.log("Số phận:", fateCount);
 const losses = {}; results.forEach((r) => r.log.fights.filter((f) => f.includes(":lose")).forEach((f) => { const k = f.split(":lose")[0]; losses[k] = (losses[k] || 0) + 1; }));

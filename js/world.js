@@ -112,7 +112,7 @@
       hideIf: "itadori_hidden",
       talk: [
         { text: ["> Ông tớ trước khi mất dặn: hãy giúp đỡ người khác. Và chết giữa vòng tay mọi người.", "Itadori nói điều đó như nói chuyện thời tiết, nhưng mắt cậu ta nhìn rất xa."], eff: { moral: 2 } },
-        { minRel: 15, text: ["> Cậu có Hệ thống, tớ có Sukuna. Hai đứa mình đều có thứ gì đó sống nhờ trong người nhỉ.", "> Nếu một ngày nó làm cậu khác đi, tớ sẽ đấm cậu tỉnh lại. Hứa đấy."], eff: { known: "itadori_biet_he_thong" } },
+        { minRel: 15, text: ["> Cậu có cái gì đó kỳ lạ trong chú lực, tớ có Sukuna. Hai đứa mình đều mang thứ người khác không hiểu nổi nhỉ.", "> Nếu một ngày nó làm cậu khác đi, tớ sẽ đấm cậu tỉnh lại. Hứa đấy."], eff: { known: "itadori_hua" } },
         { minRel: 30, req: { flag: "itadori_alive_known" }, text: ["> Lúc ở trại giam... xin lỗi vì để cậu thấy cảnh đó.", "> Thầy Gojo bắt tớ trốn. Tớ ghét nói dối mọi người. Nhưng cảm ơn vì cậu đã giữ bí mật."], eff: { anti: 1 } },
       ],
       bonds: [{ rel: 30, text: "Itadori chỉ cho Shen cách dồn lực từ hông vào nắm đấm.", eff: { base: { STR: 1 } } }, { rel: 60, text: "Itadori gọi Shen là bạn thân. Khi đứng cạnh nhau, cả hai đánh hăng hơn.", eff: { base: { STR: 1, VIT: 1 }, achievement: "a_bond_yuji" } }] },
@@ -134,7 +134,7 @@
     gojo: { likes: ["banh_ngot", "keo_deo"], likeText: "Gojo ăn hết trong ba miếng: \"Nhóc biết cách hối lộ giáo viên đấy.\"", idle: "Gojo kể về một quán bánh mới mở. Rất chi tiết. Rất lâu.",
       talk: [
         { text: ["> Giới chú thuật bây giờ thối nát lắm. Thượng tầng chỉ muốn giữ ghế. Tôi muốn nuôi lứa học trò mạnh tới mức chúng không thể bỏ qua."], eff: { known: "gojo_muc_tieu" } },
-        { minRel: 20, text: ["Gojo hiếm khi nghiêm túc. Lần này anh ta tháo băng mắt.", "> Cái Hệ thống của nhóc không xuất phát từ nhóc. Có ai đó, hoặc thứ gì đó, đã đặt nó vào. Cẩn thận với kẻ muốn biết về nó."], eff: { known: "he_thong_tu_ben_ngoai" } },
+        { minRel: 20, text: ["Gojo hiếm khi nghiêm túc. Lần này anh ta tháo băng mắt.", "> Chú lực của nhóc không giống thuật thức bẩm sinh. Như thể ai đó viết nó vào nhóc sau khi sinh ra. Cẩn thận với kẻ muốn biết vì sao."], eff: { known: "gojo_nghi_ngo" } },
       ],
       bonds: [{ rel: 40, text: "Gojo cho Shen xem một buổi \"dạy riêng\". Ba mươi giây. Shen hiểu ra khoảng cách thật sự giữa hai người.", eff: { base: { WIS: 2 }, achievement: "a_bond_gojo" } }] },
     ijichi: { likes: ["thuoc_da_day", "ca_phe_lon"], likeText: "Ijichi cảm động tới mức đẩy kính lên ba lần.", idle: "Ijichi than vãn về số giờ làm thêm. Shen gật gù.",

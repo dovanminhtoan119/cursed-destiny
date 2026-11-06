@@ -141,9 +141,9 @@
         "> Gojo Satoru. Giáo viên. Đẹp trai. Mạnh nhất. Thứ tự tùy nhóc chọn.",
         "> Có hai lựa chọn. Một là quên hết chuyện tối nay, sống tiếp như một học sinh bình thường cho tới ngày một con chú linh khác tìm tới nhóc. Hai là theo tôi tới Cao đẳng Chú thuật Tokyo.",
         "Anh ta nghiêng đầu, như thể nhìn xuyên qua lớp băng bịt mắt.",
-        "> Còn cái thứ đang lơ lửng trong đầu nhóc thì... tôi chưa thấy bao giờ. Thú vị thật.",
-        "Shen cứng người. Anh ta thấy được Hệ thống?",
-        "[Hệ thống: Không xác định được cá thể này có quan sát được Hệ thống hay không.]",
+        "> Còn chú lực của nhóc thì... vận hành theo một kiểu tôi chưa thấy bao giờ. Thú vị thật.",
+        "Shen cứng người. Đôi mắt sau lớp băng kia đang nhìn thấy gì?",
+        "[Hệ thống: Cá thể không thể nhận biết Hệ thống. Tuy nhiên, khả năng quan sát chú lực của cá thể vượt ngưỡng. Khuyến nghị: thận trọng.]",
       ],
       choices: [
         { t: "Đi theo anh ta", go: "p_enroll", eff: { rel: { gojo: 5 } } },
@@ -158,7 +158,7 @@
       choices: [{ t: "Đồng ý", go: "p_enroll", eff: { rel: { gojo: 5 } } }] },
 
     p_enroll: { chapter: "Hết phần mở đầu", title: "Cổng trường lần cuối",
-      onEnter: { exp: 0, arc: "arc1", time: { days: 2, label: "Tháng 6, 2018" }, ledger: { action: "Shen nhận lời nhập học Cao đẳng Chú thuật Tokyo", consequence: "Gojo bắt đầu để mắt tới Hệ thống" } },
+      onEnter: { exp: 0, arc: "arc1", time: { days: 2, label: "Tháng 6, 2018" }, ledger: { action: "Shen nhận lời nhập học Cao đẳng Chú thuật Tokyo", consequence: "Gojo bắt đầu để mắt tới chú lực kỳ lạ của Shen" } },
       text: [
         "Shen bước ra khỏi cổng trường Kōsen lần cuối với tư cách một học sinh bình thường.",
         "[Arc mới mở khóa: Thai nhi Chú vật.]",
@@ -330,11 +330,11 @@
         "Những đường vân đen chạy dọc mặt Itadori. Không khí trong trại giam đông cứng lại.",
         "Kẻ vừa mở mắt không còn là Itadori nữa. Hắn liếc qua chú linh đặc cấp như liếc một con muỗi, và một giây sau, nó bị chặt thành từng mảnh.",
         "Rồi đôi mắt đỏ ấy quay sang Shen.",
-        "> Hửm. Trong đầu ngươi có thứ gì đang kêu tích tắc. Thú vị đấy, nhóc con. Ta không ăn đồ chưa chín.",
-        "[CẢNH BÁO: cá thể có khả năng cảm nhận Hệ thống. Khuyến nghị: không thu hút sự chú ý của cá thể này.]",
+        "> Hửm. Chú lực của ngươi có mùi lạ, như một món ăn chưa ai từng nấu. Thú vị đấy, nhóc con. Ta không ăn đồ chưa chín.",
+        "[CẢNH BÁO: Cá thể đã ghi nhớ dấu vết chú lực của Ký chủ. Cá thể không nhận biết được Hệ thống. Khuyến nghị: không thu hút sự chú ý.]",
       ],
       observe: ["sukuna_a1"],
-      choices: [{ t: "Đứng yên, không thở", go: "a1_heart", eff: { known: "sukuna_biet_he_thong", ledger: { action: "Sukuna nhận ra Hệ thống trong người Shen", witnesses: "Không ai khác", consequence: "Sukuna ghi nhớ Shen", trigger: "Có thể kích hoạt lại khi Sukuna lấy lại thêm ngón tay" } } }] },
+      choices: [{ t: "Đứng yên, không thở", go: "a1_heart", eff: { known: "sukuna_nho_shen", ledger: { action: "Sukuna để ý tới chú lực bất thường của Shen", witnesses: "Không ai khác", consequence: "Sukuna ghi nhớ Shen", trigger: "Có thể kích hoạt lại khi Sukuna lấy lại thêm ngón tay" } } }] },
 
     a1_find: { chapter: "Arc 1", title: "Tìm Kugisaki",
       onEnter: { rel: { kugisaki: 10, fushiguro: 6 } },
@@ -381,7 +381,7 @@
     a1_interview: { chapter: "Arc 1", title: "Câu hỏi của Gojo",
       text: [
         "Hai người ngồi trên bậc thềm ngôi chùa cũ phía sau trường. Gojo tháo băng bịt mắt. Đôi mắt xanh như soi thấu cả bầu trời.",
-        "> Chú lực của nhóc như một bản vẽ chưa ký tên. Tôi đoán cái Hệ thống kia đang đợi nhóc tự quyết định nó là gì. Trả lời thật lòng nhé.",
+        "> Chú lực của nhóc như một bản vẽ chưa ký tên. Tôi muốn biết nhóc sẽ tự ký tên lên nó thế nào. Trả lời thật lòng nhé.",
       ],
       special: "interview", go: "a1_tech" },
 

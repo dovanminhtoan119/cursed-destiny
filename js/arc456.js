@@ -227,7 +227,7 @@
       text: [
         "Amanai Riko là một cô bé mười bốn tuổi, nói năng như bà cụ, ghét bị đối xử như đồ vật. Người hầu của cô, Kuroi Misato, đi theo như hình với bóng.",
         "Riko kéo Shen lại hỏi nhỏ, như thể biết cậu không thuộc về nơi này:",
-        "> Này, người ở tương lai. Ở chỗ cậu, người ta có còn nhớ tôi không?",
+        "> Này, anh phụ tá. Anh không giống người ở đây chút nào. Sau này... người ta có còn nhớ tôi không?",
         "[Hệ thống: Nhân vật mô phỏng không thể nhận thức được Ký chủ. Ghi nhận bất thường.]",
       ],
       choices: [
@@ -372,7 +372,7 @@
         ledger: { action: "Shen chặn đòn chạm của Mahito, cứu Nanami Kento", witnesses: "Mahito, Itadori", consequence: "Nanami sống sót, mất một mắt và phải rút khỏi tuyến đầu", trigger: "Mahito căm hận Shen" } },
       text: [
         "Chú lực của Shen va vào bàn tay Mahito đúng một phần mười giây trước khi nó chạm tới Nanami. Mahito bị hất lùi lại, mắt mở to vì bất ngờ.",
-        "> Ngươi... linh hồn hai lớp... lại là ngươi!",
+        "> Ngươi... cái linh hồn nhiều nếp gấp đó... lại là ngươi!",
         "Cùng lúc đó, Itadori lao vào từ cầu thang, gầm lên như thú dữ. Mahito chửi thề, tan vào đám đông người cải biến rồi biến mất.",
         "Nanami nằm tựa vào cột, thở yếu ớt. Anh ta nhìn Shen bằng con mắt còn lại.",
         "> Tôi đã nói... đó là việc của người lớn.",
@@ -476,7 +476,7 @@
         "Một đám trẻ con bị điều khiển nhét thẳng mười ngón tay của Sukuna vào miệng Itadori.",
         "Khi Itadori đứng dậy, đó không còn là Itadori nữa.",
         "Sukuna bước qua Shen như bước qua một tảng đá. Hắn dừng lại nửa bước.",
-        "> Ồ. Thứ trong đầu ngươi vẫn kêu tích tắc. Ngươi chín hơn rồi đấy, nhóc con. Nhưng vẫn chưa đủ.",
+        "> Ồ. Lại là cái mùi chú lực lạ đó. Ngươi chín hơn rồi đấy, nhóc con. Nhưng vẫn chưa đủ.",
         "Rồi hắn đi gặp Jogo. Trận chiến của hai đặc cấp thiêu rụi ba khu phố.",
       ],
       observe: ["sukuna_a1", "jogo"],
@@ -516,12 +516,12 @@
         "Geto Suguru. Người đã chết từ năm năm trước. Đường khâu chạy ngang trán hắn.",
         "> Không phải Geto đâu, Shen nghe chính mình thì thầm. Hệ thống không lên tiếng, nhưng cậu biết.",
         "Kẻ đội lốt Geto mỉm cười, nhìn thẳng về phía Shen.",
-        "> Một hệ thống, hửm? Tôi đã thắc mắc ai đặt thứ đó vào nhóc. Hóa ra không phải tôi. Thú vị.",
+        "> Chú lực của nhóc không khớp với bất kỳ dòng máu nào tôi từng ghi chép suốt một nghìn năm. Tôi không đoán trước được nhóc. Thú vị.",
         "Hắn giơ tay lên. Trên khắp Nhật Bản, những người từng bị hắn gieo mầm thức tỉnh cùng lúc.",
         "> Trò chơi bắt đầu.",
       ],
       observe: ["kenjaku"],
-      choices: [{ t: "Tiếp tục", go: "a6_after", eff: { known: "kenjaku_biet_he_thong", ledger: { action: "Kenjaku nhận ra Hệ thống của Shen không do hắn tạo ra", witnesses: "Itadori, Todo", consequence: "Kenjaku bắt đầu tò mò về nguồn gốc Hệ thống", trigger: "Tử Diệt Hồi Du" } } }] },
+      choices: [{ t: "Tiếp tục", go: "a6_after", eff: { known: "kenjaku_de_y_shen", ledger: { action: "Kenjaku chú ý tới chú lực không rõ nguồn gốc của Shen", witnesses: "Itadori, Todo", consequence: "Kenjaku bắt đầu tò mò về Shen", trigger: "Tử Diệt Hồi Du" } } }] },
 
     a6_after: { chapter: "Hết Arc 6", title: "Sau Shibuya", env: "rain/temple", cast: ["shen", "itadori", "fushiguro"],
       onEnter: { quest: { id: "q_shibuya", status: "done" }, achievement: "a_shibuya", exp: 30000, sp: 200, time: { days: 3, label: "Tháng 11, 2018" } },

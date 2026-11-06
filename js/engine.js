@@ -74,7 +74,7 @@
       milestonesHit: [],
       ledger: [], txDone: [], log: [],
       known: [],
-      fates: {}, hub: null, hubFight: null, shopBought: {}, pendingRank: null, rankHistory: [], skillLv: {}, genItems: {}, domainStage: 0, ivTraces: {}, ivEff: { moral: 0, anti: 0 },
+      fates: {}, techTier: 1, techBranch: null, techHidden: false, hub: null, hubFight: null, shopBought: {}, pendingRank: null, rankHistory: [], skillLv: {}, genItems: {}, domainStage: 0, ivTraces: {}, ivEff: { moral: 0, anti: 0 },
     };
     CD.recalc(s, true);
     return s;
@@ -90,7 +90,7 @@
     };
     s.bonusSources.forEach((b) => add(b.src, b.stats));
     (s.traits || []).forEach((id) => { const t = D().TRAITS[id]; if (t && t.stats) add("Đặc tính: " + t.name, t.stats); });
-    if (s.restriction) { const r = D().RESTRICTIONS[s.restriction]; if (r && r.stats) add("Thiên dữ: " + r.name, r.stats); }
+
     for (const slot in s.equipment) { const it = D().ITEMS[s.equipment[slot]]; if (it && it.stats) add("Trang bị: " + it.name, it.stats); }
     const tier = CD.moralTier(s.moral); if (tier.bonus) add("Thiện–Ác: " + tier.name, tier.bonus);
     // Đặc tính cá nhân: nhân hệ số SAU khi cộng thẳng, làm tròn xuống (World Rule)
@@ -98,7 +98,7 @@
     CD.STATS.forEach((k) => {
       if (mult[k] !== 1) {
         const before = out[k]; out[k] = Math.floor(before * mult[k]);
-        breakdown[k].push({ src: "Hệ số đặc tính ×" + +mult[k].toFixed(3), v: out[k] - before, mult: mult[k] });
+        breakdown[k].push({ src: "Hệ số đặc tính & Thiên dữ ×" + +mult[k].toFixed(3), v: out[k] - before, mult: mult[k] });
       }
     });
     if (extraBuffs) add("Hiệu ứng tạm thời", extraBuffs);
@@ -110,7 +110,15 @@
   CD.traitMults = function (s) {
     const m = { STR: 1, AGI: 1, VIT: 1, INT: 1, WIS: 1, LUK: 1 };
     (s.traits || []).forEach((id) => { const t = D().TRAITS[id]; if (t && t.mult) for (const k in t.mult) m[k] *= t.mult[k]; });
+    // Thiên dữ chú phược: hệ số tăng theo Rank (World Rule)
+    const r = s.restriction && D().RESTRICTIONS[s.restriction];
+    if (r && r.mult) for (const k in r.mult) m[k] *= CD.restrMult(s, r, k);
     return m;
+  };
+  CD.restrMult = (s, r, k) => r.mult[k] + (r.perRank || 0) * CD.rankIndex(s.rank);
+  CD.restrDesc = function (r, s) {
+    const ri = s ? CD.rankIndex(s.rank) : 0;
+    return Object.entries(r.mult).map(([k, v]) => k + " ×" + (Math.round((v + (r.perRank || 0) * ri) * 100) / 100)).join(", ") + " (mỗi Rank +" + r.perRank + "). " + r.cost;
   };
 
   /* hệ số từ đặc tính / Thiên dữ (ghi trong World Rules) */
@@ -321,6 +329,7 @@
       if (prev !== eff.fate[k]) msgs.push("SỐ PHẬN · " + (n ? n.name : k) + ": " + (CD.FATE_LABEL[eff.fate[k]] || eff.fate[k]) + (canon && canon !== eff.fate[k] ? " (khác nguyên tác)" : ""));
     }
     if (eff.points) { s.unallocated += eff.points; msgs.push("+" + eff.points + " điểm chỉ số tự do"); }
+    if (eff.expLv) { let t = 0; const n = Math.floor(eff.expLv), fr = eff.expLv - n; for (let i = 0; i < n; i++) t += CD.expRequired(s.level + i); t += Math.floor(CD.expRequired(s.level + n) * fr); eff = Object.assign({}, eff, { exp: (eff.exp || 0) + t }); }
     if (eff.exp) msgs.push(...CD.gainExp(s, eff.exp));
     CD.recalc(s);
     if (eff.hpSet) s.cur.hp = Math.min(s.cur.hp, eff.hpSet);
@@ -424,7 +433,7 @@
     return s.hub;
   };
   CD.hubDef = (s) => s.hub && D().HUBS[s.hub.id];
-  CD.FATE_LABEL = { alive: "Còn sống", dead: "Tử vong", injured: "Trọng thương", sealed: "Bị phong ấn", captured: "Bị bắt giữ", retired: "Rút lui khỏi tuyến đầu", missing: "Mất tích" };
+  CD.FATE_LABEL = { alive: "Còn sống", dead: "Tử vong", injured: "Trọng thương", sealed: "Bị phong ấn", captured: "Bị bắt giữ", retired: "Rút lui khỏi tuyến đầu", missing: "Mất tích", possessed: "Bị chiếm xác" };
   CD.npcAvailable = (s, id) => { const f = s.fates && s.fates[id], SO = D().SOCIAL[id]; return !["dead", "sealed", "captured", "missing"].includes(f) && !(SO && SO.showIf && !s.flags.includes(SO.showIf)); };
   CD.hubNpcs = function (s, loc) {
     const L = CD.hubDef(s).locations[loc || s.hub.loc], n = L.npcs || [];
@@ -590,13 +599,18 @@
       if (k === "moralMin" && s.moral < req.moralMin) return false;
       if (k === "rel") for (const n in req.rel) if ((s.rel[n] || 0) < req.rel[n]) return false;
       if (k === "anyFlag" && !req.anyFlag.some((f) => s.flags.includes(f))) return false;
+      if (k === "restriction" && !!s.restriction !== !!req.restriction) return false;
+      if (k === "domain" && (s.domainStage || 0) < req.domain) return false;
+      if (k === "rankMin" && CD.rankIndex(s.rank) < CD.rankIndex(req.rankMin)) return false;
+      if (k === "fate") for (const n in req.fate) if ((s.fates || {})[n] !== req.fate[n]) return false;
+      if (k === "notFate") for (const n in req.notFate) if ((s.fates || {})[n] === req.notFate[n]) return false;
     }
     return true;
   };
   CD.reqText = function (req) {
     if (!req) return "";
     return Object.entries(req).map(([k, v]) =>
-      CD.STATS.includes(k) ? k + " ≥ " + v : k === "level" ? "Lv ≥ " + v : k === "rel" ? Object.entries(v).map(([n, x]) => "Quan hệ " + ((D().NPCS[n] || {}).name || n) + " ≥ " + x).join(", ") : k === "technique" ? "Cần thuật thức" : k === "moralMin" ? "Thiện–Ác ≥ " + v : "").filter(Boolean).join(", ");
+      CD.STATS.includes(k) ? k + " ≥ " + v : k === "level" ? "Lv ≥ " + v : k === "rel" ? Object.entries(v).map(([n, x]) => "Quan hệ " + ((D().NPCS[n] || {}).name || n) + " ≥ " + x).join(", ") : k === "technique" ? "Cần thuật thức" : k === "moralMin" ? "Thiện–Ác ≥ " + v : k === "domain" ? "Lãnh địa cấp ≥ " + v : k === "rankMin" ? "Rank ≥ " + v : k === "restriction" ? (v ? "Có Thiên dữ chú phược" : "") : "").filter(Boolean).join(", ");
   };
 
   /* ---------- PHẦN VII: GỢI Ý THUẬT THỨC TỪ DẤU VẾT ---------- */
@@ -622,7 +636,8 @@
     const d = CD.derive(n.stats, n.lv);
     if (n.hpMult) d.maxHP = Math.floor(d.maxHP * n.hpMult);
     if (npcId.startsWith("c_")) d.maxHP = Math.floor(d.maxHP * CD.CURSE_HP_MULT); // World Rule: chú linh bền hơn
-    return { id: npcId, name: n.name, rank: n.rank, lv: n.lv, stats: n.stats, d, hp: d.maxHP, ce: d.maxCE, skills: n.skills || [], exp: n.exp || 0, cds: {}, debuff: [], marks: 0, stun: 0 };
+    const exp = n.exp != null ? n.exp : Math.round(CD.expRequired(n.lv) * (n.expMul || 0.25));
+    return { id: npcId, name: n.name, rank: n.rank, lv: n.lv, stats: n.stats, d, hp: d.maxHP, ce: d.maxCE, skills: n.skills || [], exp, cds: {}, debuff: [], marks: 0, stun: 0 };
   };
 
   /* Thứ tự tính sát thương (cố định cả chiến dịch):
@@ -708,7 +723,7 @@
           const teva = Math.min(0.4, (0.4 * t.stats.AGI) / (t.stats.AGI + 100));
           if (!e.sure && !(focus && focus.sure) && !(c.domain && sk.tech && c.domain.st.sure) && rng() < teva) { L.push(t.name + " né được " + sk.name + (hits > 1 ? " (đòn " + (h + 1) + ")" : "") + "."); continue; }
           let atk = e.dmg.src === "cpow" ? d.cpow : e.dmg.src === "hybrid" ? d.patk + 0.5 * d.cpow : d.patk;
-          let mult = e.dmg.mult * lvm * (focus ? focus.mult || 1 : 1) * (c.domain && sk.tech ? c.domain.st.mult : 1);
+          let mult = e.dmg.mult * lvm * (focus ? focus.mult || 1 : 1) * (c.domain && sk.tech ? c.domain.st.mult : 1) * (sk.tech && CD.techMult ? CD.techMult(s) : 1);
           if (e.detonate) { mult *= 1 + t.marks; L.push("Kích nổ " + t.marks + " ấn."); t.marks = 0; }
           if (e.release) { atk += c.stored; L.push("Trả lại " + c.stored + " sát thương đã hứng."); c.stored = 0; }
           let def = e.dmg.src === "patk" ? t.d.pdef : t.d.cdef;

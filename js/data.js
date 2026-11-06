@@ -11,7 +11,7 @@
     "Rank E–SSS ánh xạ sang cấp chú thuật sư: E Cấp 4 · D Cấp 3 · C Cấp 2 · B Bán cấp 1 · A Cấp 1 · S Đặc cấp · SS Đặc cấp siêu việt · SSS Thiên thượng.",
     "Class = Thuật thức. Mỗi thuật thức có 4 bậc tiến hóa và ít nhất một nhánh ẩn.",
     "Đặc tính cá nhân nhân hệ số lên chỉ số sau khi cộng thẳng (cơ bản + trang bị + khế ước), rồi làm tròn xuống. Hai đặc tính cùng tăng một chỉ số thì nhân với nhau.",
-    "Hệ thống cho phép Shen vừa mang Thiên dữ chú phược vừa dùng thuật thức — điều mà người thường không thể có. Mỗi khế ước có cái giá cố định.",
+    "Hệ thống cho phép Shen vừa mang Thiên dữ chú phược vừa dùng thuật thức — điều mà người thường không thể có. Khế ước nhân hệ số lên chỉ số (như đặc tính) và hệ số này tăng mỗi khi Shen lên Rank. Cái giá đi kèm là cố định.",
     "Đòn đánh tay không dùng Tấn công vật lý, trừ Giáp. Đòn chú lực dùng Uy lực chú lực, trừ Kháng chú.",
     "Thứ tự sát thương: Tấn công × Hệ số → trừ phòng thủ (tối thiểu 1) → chí mạng ×1.5 → yếu/kháng → làm tròn xuống.",
     "Chú linh có HP tối đa ×1.5 so với công thức chung (chúng không biết đau).",
@@ -50,10 +50,12 @@
 
   /* ---------- THIÊN DỮ CHÚ PHƯỢC (khế ước Hệ thống) ---------- */
   const RESTRICTIONS = {
-    xacthit: { name: "Xác Thịt Tối Thượng", stats: { STR: 4, AGI: 4, VIT: 4 }, mods: { ceMult: 0.7 }, desc: "STR +4, AGI +4, VIT +4. Đổi lại: Chú lực tối đa ×0.70." },
-    tamthan: { name: "Tâm Thần Thiên Bẩm", stats: { INT: 4, WIS: 6 }, mods: { ceRegen: 3, hpMult: 0.8 }, desc: "INT +4, WIS +6, hồi thêm 3 chú lực mỗi lượt. Đổi lại: HP tối đa ×0.80." },
-    menhdoi: { name: "Mệnh Đổi Mệnh", stats: { LUK: 5 }, mods: { critBonus: 0.1, techHpCost: 0.05 }, desc: "LUK +5, chí mạng +10%. Đổi lại: mỗi lần dùng kỹ năng thuật thức mất 5% HP hiện tại." },
+    xacthit: { name: "Xác Thịt Tối Thượng", mult: { STR: 1.3, AGI: 1.3, VIT: 1.3 }, perRank: 0.05, mods: { ceMult: 0.7 }, cost: "Đổi lại: Chú lực tối đa ×0.70." },
+    tamthan: { name: "Tâm Thần Thiên Bẩm", mult: { INT: 1.3, WIS: 1.4 }, perRank: 0.05, mods: { ceRegen: 3, hpMult: 0.8 }, cost: "Hồi thêm 3 Chú lực mỗi lượt. Đổi lại: HP tối đa ×0.80." },
+    menhdoi: { name: "Mệnh Đổi Mệnh", mult: { LUK: 1.5, STR: 1.1, AGI: 1.1, VIT: 1.1, INT: 1.1, WIS: 1.1 }, perRank: 0.03, mods: { critBonus: 0.1, techHpCost: 0.05 }, cost: "Chí mạng +10%. Đổi lại: mỗi lần dùng kỹ năng thuật thức mất 5% HP hiện tại." },
   };
+  Object.values(RESTRICTIONS).forEach((r) => (r.desc = Object.entries(r.mult).map(([k, v]) => k + " ×" + v).join(", ") + " — hệ số tăng thêm " + r.perRank + " mỗi khi lên Rank. " + r.cost));
+
 
   /* ---------- KỸ NĂNG ---------- */
   const SKILLS = {

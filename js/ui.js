@@ -99,7 +99,7 @@
     const sc = SC[S.scene];
     if (sc.hub) return hubView(sc);
     let h = stage(CD.ART.cast(S.scene));
-    h += `<article class="scene"><p class="chap">${esc(sc.chapter)}</p><h2>${esc(sc.title)}</h2><div class="text">${sc.text.map(line).join("")}</div></article>`;
+    h += `<article class="scene"><p class="chap">${esc(sc.chapter)}</p><h2>${esc(sc.title)}</h2><div class="text">${sc.text.concat(S.restriction && sc.ifRestriction ? sc.ifRestriction : []).map(line).join("")}</div></article>`;
     h += msgBox(msgs);
     if (sc.observe) h += `<div class="obs"><p class="label">Quan sát</p><div class="npcs">${sc.observe.map((n) => npcCard(n)).join("")}</div></div>`;
     if (sc.special) h += specialView(sc);
@@ -137,7 +137,7 @@
     if (sc.special === "restriction") {
       if (S.flags.includes("restriction_decided")) return contBtn(sc.go);
       return `<div class="cards one">${Object.entries(D.RESTRICTIONS).map(([id, r]) =>
-        `<div class="card big"><strong class="tname">${esc(r.name)}</strong><span>${esc(r.desc)}</span><button class="primary" data-restr="${id}">Ký khế ước</button></div>`).join("")}
+        `<div class="card big"><strong class="tname">${esc(r.name)}</strong><span>${esc(r.desc)}</span><span class="muted">Hiện tại (Rank ${S.rank}): ${esc(Object.entries(r.mult).map(([k]) => k + " ×" + (Math.round(CD.restrMult(S, r, k) * 100) / 100)).join(", "))}</span><button class="primary" data-restr="${id}">Ký khế ước</button></div>`).join("")}
         <button class="ghost" data-restr="">Từ chối, không ký khế ước nào</button></div>`;
     }
     if (sc.special === "rankup") return `<div class="choices"><button class="primary" data-rankup="${sc.go}">Kiểm tra đột phá</button></div>`;
@@ -294,7 +294,7 @@
     const e = CD.effective(S), d = CD.derived(S), m = CD.mods(S), rc = CD.rankCheck(S);
     let h = `<section class="panel"><p class="label">Hồ sơ</p>
       <div class="kv"><span>Tên</span><b>Shen · 15 tuổi</b><span>Rank</span><b>${S.rank} — ${CD.RANK_INFO[S.rank].grade}</b><span>Level</span><b>${S.level} · EXP ${S.exp}/${CD.expRequired(S.level)}</b>
-      <span>Thuật thức</span><b>${S.technique ? esc(D.TECHNIQUES[S.technique].name) + " (Bậc 1)" : "Chưa thức tỉnh"}</b>
+      <span>Thuật thức</span><b>${S.technique ? esc(D.TECHNIQUES[S.technique].name) + " · Bậc " + (S.techTier || 1) + ": " + esc(CD.techName(S)) + (S.techHidden ? " (nhánh ẩn)" : "") : "Chưa thức tỉnh"}</b>
       <span>Thiên dữ</span><b>${S.restriction ? esc(D.RESTRICTIONS[S.restriction].name) : "Không"}</b></div>
       ${rc.next ? `<p class="muted">Đột phá Rank ${rc.next}: Lv ${rc.minLv} ${rc.lvOk ? "✓" : "✗"} · Sát hạch ${rc.trialOk ? "✓" : "✗"}</p>${rc.can ? `<button class="primary" data-rankup-now>Đột phá Rank ${rc.next}</button>` : ""}` : ""}
       ${rc.next && D.RANK_REWARDS[rc.next] ? (() => { const R = D.RANK_REWARDS[rc.next], f = R.fixed, ch = typeof R.choices === "function" ? R.choices(S) : R.choices;
@@ -310,10 +310,19 @@
       <span>Kháng chú</span><b>${CD.fmt(d.cdef)}</b><span>Né tránh</span><b>${(d.evasion * 100).toFixed(1)}%</b><span>Chí mạng</span><b>${(d.crit * 100).toFixed(1)}%</b>
       <span>Tốc độ</span><b>×${d.speed.toFixed(3)}</b><span>Hồi chú lực/lượt</span><b>${m.ceRegen}</b><span>Hệ số EXP</span><b>×${m.expMult}</b></div></section>`;
     h += `<section class="panel"><p class="label">Đặc tính</p>${S.traits.map((t) => `<div class="skill"><strong>${esc(D.TRAITS[t].name)}</strong><div class="muted">${esc(D.TRAITS[t].desc)}</div></div>`).join("") || `<p class="muted">Chưa chọn.</p>`}
-      ${S.restriction ? `<p class="label">Thiên dữ chú phược</p><div class="skill"><strong>${esc(D.RESTRICTIONS[S.restriction].name)}</strong><div class="muted">${esc(D.RESTRICTIONS[S.restriction].desc)}</div></div>` : ""}</section>`;
+      ${S.restriction ? `<p class="label">Thiên dữ chú phược</p><div class="skill"><strong>${esc(D.RESTRICTIONS[S.restriction].name)}</strong><div class="muted">${esc(CD.restrDesc(D.RESTRICTIONS[S.restriction], S))}</div></div>` : ""}</section>`;
     if (S.technique) { const t = D.TECHNIQUES[S.technique];
       h += `<section class="panel"><p class="label">Thuật thức · ${esc(t.name)}</p><p class="muted">${esc(t.desc)}</p><ol class="tree">${t.tree.map((x, i) => `<li class="${i === 0 ? "cur" : ""}">${esc(x)}</li>`).join("")}<li class="hid">Nhánh ẩn: ??? · Gợi ý: ${esc(t.hiddenHint || "")}</li></ol></section>`; }
     h += msgBox(shopNote && tab === "char" ? [shopNote] : []);
+    if (S.technique) {
+      const nx = CD.evoNext(S), t = D.TECHNIQUES[S.technique];
+      h += `<section class="panel domainp"><p class="label">Tiến hóa thuật thức · hiện tại Bậc ${S.techTier || 1}: ${esc(CD.techName(S))} · kỹ năng thuật thức ×${CD.techMult(S).toFixed(2)}</p>
+        <ol class="tree">${t.tree.map((x, i) => `<li class="${i + 1 === (S.techTier || 1) && !S.techHidden ? "cur" : ""}">${esc(x)}</li>`).join("")}<li class="hid ${S.techHidden ? "cur" : ""}">Nhánh ẩn: ${S.techHidden ? esc(t.hidden) : "??? · Gợi ý: " + esc(t.hiddenHint || "")}</li></ol>
+        ${nx ? `<div class="skill"><strong>Lên Bậc ${nx.ev.tier}</strong><div class="muted">${esc(nx.ev.desc)} Cần Rank ${nx.ev.rank} ${nx.rankOk ? "✓" : "✗"} · ${nx.ev.sp} ĐHT ${nx.spOk ? "✓" : "✗"}</div>
+          <div class="row">${nx.branches.map((b, i) => `<button class="ghost sm" data-evolve="${i}" ${nx.rankOk && nx.spOk ? "" : "disabled"}>${esc(b)}</button>`).join("")}
+          ${nx.hidden ? `<button class="ghost sm liked" data-evolve="hidden" ${nx.rankOk && nx.spOk && nx.hidden.ok ? "" : "disabled"}>Nhánh ẩn: ${nx.hidden.ok ? esc(nx.hidden.name) : "???"}</button>` : ""}</div>
+          ${nx.hidden ? `<ul class="checks">${nx.hidden.need.map((x) => `<li class="${/✓$/.test(x) ? "ok" : ""}">${esc(x)}</li>`).join("")}</ul>` : ""}</div>` : `<p class="hot">Đã đạt hình thái hoàn thiện.</p>`}</section>`;
+    }
     if (S.technique) {
       const dm = D.DOMAINS[S.technique], info = CD.domainInfo(S), nx = CD.domainNext(S);
       h += `<section class="panel domainp"><p class="label">Bành trướng lãnh địa · ${esc(dm.name)}</p><p class="muted"><i>${esc(dm.text)}</i></p><p class="muted">Hiệu ứng: ${esc(dm.effect)}</p>
@@ -387,7 +396,7 @@
     $("#hud").innerHTML = header();
     const sysOn = S.flags.includes("system"), inFight = combat && !combat.over && tab === "story";
     $("#main").innerHTML = tab === "story" || !sysOn ? storyView() : tab === "char" ? charView() : tab === "inv" ? invView() : tab === "shop" ? shopView() : tab === "world" ? worldView() : saveView();
-    $("#tabs").innerHTML = sysOn && !inFight ? TABS.map(([k, n]) => `<button data-tab="${k}" class="${tab === k ? "on" : ""}">${n}${k === "char" && (S.unallocated || (CD.domainNext(S) || {}).ready) ? "<i></i>" : ""}${k === "story" && S.pendingRank ? "<i></i>" : ""}</button>`).join("") : "";
+    $("#tabs").innerHTML = sysOn && !inFight ? TABS.map(([k, n]) => `<button data-tab="${k}" class="${tab === k ? "on" : ""}">${n}${k === "char" && (S.unallocated || (CD.domainNext(S) || {}).ready || ((CD.evoNext(S) || {}).rankOk && (CD.evoNext(S) || {}).spOk)) ? "<i></i>" : ""}${k === "story" && S.pendingRank ? "<i></i>" : ""}</button>`).join("") : "";
     $("#tabs").hidden = !sysOn || inFight;
     document.body.classList.toggle("fighting", !!inFight);
   }
@@ -412,6 +421,7 @@
     if (ds.rankupNow !== undefined) { msgs = CD.tryRankScene(S); autosave(); tab = "story"; render(); return; }
     if (ds.claim !== undefined) { msgs = CD.claimRank(S, +ds.claim) || []; autosave(); render(); window.scrollTo({ top: 0 }); return; }
     if (ds.alloc) { keepScroll(() => { CD.allocate(S, ds.alloc, 1); autosave(); }); return; }
+    if (ds.evolve !== undefined) { keepScroll(() => { const r = CD.evolve(S, ds.evolve === "hidden" ? "hidden" : +ds.evolve); shopNote = r.ok ? r.msgs.join(" · ") : r.msg; autosave(); }); return; }
     if (ds.domainUnlock !== undefined) { keepScroll(() => { const r = CD.unlockDomain(S); shopNote = r.ok ? r.msgs.join(" · ") : r.msg; autosave(); }); return; }
     if (ds.redo !== undefined) { if (CD.redoSurvey(S)) { ivIndex = 0; msgs = ["Đã xóa câu trả lời cũ. Gojo hỏi lại từ đầu."]; S.scene = "a1_interview"; autosave(); render(); window.scrollTo({ top: 0 }); } return; }
     if (ds.sell) { keepScroll(() => { msgs = [CD.sellItem(S, ds.sell) || "Không phân giải được."]; autosave(); }); return; }

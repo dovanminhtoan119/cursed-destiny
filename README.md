@@ -12,6 +12,7 @@ Chơi tại: https://dovanminhtoan119.github.io/cursed-destiny/
 - `js/domain.js` — Bành trướng lãnh địa: 3 cấp độ, 8 lãnh địa theo thuật thức, mở khóa theo Rank/Level/INT/WIS/Chú lực.
 - `js/world.js` — quan hệ NPC, khu tự do (ngày/buổi), cửa hàng, thưởng đột phá, kẻ địch Arc 2–3.
 - `js/arc456.js` — Arc 4 Cửu tướng Chú thai, Arc 5 Ký ức Hoài Ngọc, Arc 6 Sự biến Shibuya, hệ thống Số phận NPC.
+- `js/arc7_12.js` — tiến hóa thuật thức 4 bậc + nhánh ẩn, phản ứng NPC, Arc 7–12 và 3 kết thúc.
 - `js/story.js`, `js/story2.js` — cốt truyện Mở đầu, Arc 1, Arc 2 (Đối đầu Mahito), Arc 3 (Giao lưu Kyoto).
 - `js/art.js` — phông cảnh ngày/đêm theo địa điểm, chân dung Shen và chú linh nguyên bản (nhân vật nguyên tác hiển thị bằng ấn bùa).
 - `js/ui.js`, `css/style.css` — giao diện (Times New Roman).
