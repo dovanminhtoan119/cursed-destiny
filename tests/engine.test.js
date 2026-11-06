@@ -61,15 +61,35 @@ Object.entries(S).forEach(([id, sc]) => {
 /* ---- Khu tự do, cửa hàng, NPC ---- */
 { const s = CD.newCampaign(); s.flags.push("system"); CD.enterScene(s, "a1_hub1");
   ok("vào khu tự do", s.hub && s.hub.id === "a1_hub1");
-  const r1 = CD.hubAct(s, "talk", "itadori"); ok("trò chuyện tăng quan hệ", (s.rel.itadori || 0) >= 4); eq("tốn một buổi", s.hub.slot, 1);
-  CD.hubAct(s, "train", "STR"); CD.hubAct(s, "train", "STR"); CD.hubAct(s, "train", "STR");
-  const r4 = CD.hubAct(s, "train", "STR"); eq("giới hạn luyện tập", s.base.STR, 8);
+  eq("bắt đầu 07:00", CD.clock(s.hub.time), "07:00");
+  CD.hubAct(s, "talk", "itadori"); ok("trò chuyện tăng quan hệ", (s.rel.itadori || 0) >= 4); eq("trò chuyện 15 phút", CD.clock(s.hub.time), "07:15");
+  CD.hubAct(s, "move", "pho"); eq("di chuyển 15 phút", CD.clock(s.hub.time), "07:30");
+  for (let i = 0; i < 5; i++) CD.hubAct(s, "train", "STR");
+  eq("giới hạn luyện tập 4 lần", s.base.STR, 9); eq("4 giờ luyện", CD.clock(s.hub.time), "11:30");
+  CD.hubAct(s, "spar", "itadori"); eq("chưa đủ thân thì không tốn giờ", CD.clock(s.hub.time), "11:30");
+  s.hub.time = CD.DAY_END - 30; const o = CD.hubAct(s, "explore"); ok("không đủ giờ thì từ chối", /Không đủ thời gian/.test(o.msgs[0]));
+  CD.hubAdvance(s, 30); eq("quá 23:00 sang ngày mới", [s.hub.daysLeft, CD.clock(s.hub.time)], [2, "07:00"]);
+  CD.hubAct(s, "sleep"); eq("đi ngủ sang ngày", s.hub.daysLeft, 1);
   s.currency.sp = 100; const b = CD.buy(s, "system", "tinh_STR"); ok("mua được", b.ok); eq("trừ điểm chính xác", s.currency.sp, 40);
   CD.buy(s, "system", "tinh_STR"); eq("hết hàng sau 2 lần", CD.buy(s, "system", "tinh_STR").ok, false);
-  CD.useItem(s, "tinh_STR"); eq("tinh hoa cộng STR", s.base.STR, 9);
+  CD.useItem(s, "tinh_STR"); eq("tinh hoa cộng STR", s.base.STR, 10);
   s.currency.yen = 100; eq("không đủ yên", CD.buy(s, "academy", "dao_chu4").ok, false);
   s.rel.itadori = 29; CD.applyEff(s, { rel: { itadori: 1 } }); ok("mốc quan hệ 30", s.txDone.includes("bond_itadori_0"));
-  while (!CD.hubOver(s)) CD.hubAct(s, "rest"); eq("hết ngày", s.hub.daysLeft, 0); }
+  s.currency.yen = 50000; s.currency.sp = 500; s.base.STR = 10;
+  ok("học kỹ năng Học viện", CD.learnSkill(s, "sk_kick").ok); eq("trừ yên", s.currency.yen, 42000);
+  eq("không học lại", CD.learnSkill(s, "sk_kick").ok, false);
+  eq("chưa đủ Lv để nâng cấp", CD.upgradeSkill(s, "sk_kick").ok, false);
+  s.level = 4; ok("nâng cấp lên 2", CD.upgradeSkill(s, "sk_kick").ok); eq("giá nâng cấp = 60% × cấp", s.currency.yen, 42000 - 4800); eq("hệ số cấp 2", CD.skillMult(s, "sk_kick"), 1.1);
+  eq("Rank chặn kỹ năng", CD.learnSkill(s, "sk_simple").ok, false);
+  ok("nâng cấp kỹ năng khởi đầu bằng ĐHT", CD.upgradeSkill(s, "sk_punch").ok); eq("trừ 40 ĐHT", s.currency.sp, 460);
+  while (!CD.hubOver(s)) CD.hubAct(s, "sleep"); eq("hết ngày", s.hub.daysLeft, 0);
+  eq("hết thời gian tự do thì không học kỹ năng Học viện", CD.learnSkill(s, "sk_bandage").ok, false); }
+{ // hiệu ứng mới trong trận
+  const s = CD.newCampaign(); s.skills.push("sk_combo", "sk_focus", "sk_bandage"); s.base.AGI = 12; CD.recalc(s, true);
+  const c = CD.combat.start(s, ["c_doll"]); const r0 = () => 0.99;
+  CD.combat.playerAct(s, c, { type: "skill", id: "sk_combo" }, r0); ok("Liên quyền đánh 2 lần", c.log.filter((l) => /đòn \d\) gây/.test(l)).length === 2);
+  s.cur.hp = 50; c.cds = {}; CD.combat.playerAct(s, c, { type: "skill", id: "sk_bandage" }, r0); ok("Băng bó hồi HP", c.log.some((l) => /hồi \d+ HP/.test(l)));
+}
 { const s = CD.newCampaign(); s.level = 8; s.flags.push("trial_D"); CD.tryRankScene(s); eq("chờ chọn thưởng", s.pendingRank, "D");
   eq("3 lựa chọn", CD.rankChoices(s).length, 3); const before = s.base.INT; CD.claimRank(s, 1); eq("thưởng Tâm pháp", s.base.INT, before + 2); eq("hết chờ", s.pendingRank, null); }
 
@@ -91,6 +111,8 @@ function fight(s, enemies, opts, rng, txKey, log, label) {
   return c;
 }
 function shopping(s) {
+  CD.DATA.SKILL_SHOP.forEach((e) => { if (CD.canLearn(s, e.id).ok) CD.learnSkill(s, e.id); });
+  s.skills.forEach((k) => { const c = CD.upgradeCost(s, k); if (c && c.cur === "yen" && s.currency.yen > c.price + 20000) CD.upgradeSkill(s, k); });
   ["tinh_STR", "tinh_VIT", "tinh_INT", "tinh_WIS", "dan_he", "manh_tiem"].forEach((id) => { const r = CD.buy(s, "system", id); if (r.ok && CD.DATA.ITEMS[id].use && !CD.DATA.ITEMS[id].use.hp) CD.useItem(s, id); });
   if (s.hub) ["thuoc_ieiri", "dao_chu4", "giay_chu"].forEach((id) => CD.buy(s, "academy", id));
 }
@@ -107,21 +129,31 @@ function playthrough(seed, prefer) {
     else if (sc.special === "rankup") { CD.tryRankScene(s); if (s.pendingRank) CD.claimRank(s, seed % 3); id = sc.go; }
     else if (sc.hub) {
       const H = CD.DATA.HUBS[sc.hub];
-      while (!CD.hubOver(s)) {
+      let guard = 0;
+      while (!CD.hubOver(s) && guard++ < 400) {
         log.hubSlots++; shopping(s);
-        if (s.cur.hp < CD.derived(s).maxHP * 0.6) { CD.hubAct(s, "rest"); continue; }
+        if (s.cur.hp < CD.derived(s).maxHP * 0.6) { if (CD.canSpend(s, "nap")) CD.hubAct(s, "nap"); else CD.hubAct(s, "sleep"); continue; }
         const locs = Object.keys(H.locations);
-        const withEv = locs.find((l) => { s.hub.loc = l; return CD.exploreEvents(s).length; });
-        if (withEv) { s.hub.loc = withEv; const o = CD.hubAct(s, "explore", null, null, rng);
+        const withEv = CD.canSpend(s, "explore") && locs.find((l) => CD.exploreEvents(s, l).length);
+        if (withEv) { if (s.hub.loc !== withEv) { CD.hubAct(s, "move", withEv); if (s.hub.loc !== withEv) continue; }
+          if (!CD.canSpend(s, "explore")) { CD.hubAct(s, "sleep"); continue; }
+          const o = CD.hubAct(s, "explore", null, null, rng);
           if (o.combat) { s.hubFight = { ...o.combat, loc: withEv }; const c = fight(s, o.combat.enemies, { canFlee: true }, rng, null, log, "hub:" + o.combat.evId); CD.hubFightEnd(s, c); }
           continue; }
-        if (s.hub.trains < H.trainCap) { const k = ["STR", "VIT", "INT", "WIS"][s.hub.trains % 4]; CD.hubAct(s, "train", k); continue; }
+        if (s.hub.trains < H.trainCap && CD.canSpend(s, "train")) { const k = ["STR", "VIT", "INT", "WIS"][s.hub.trains % 4]; CD.hubAct(s, "train", k); continue; }
         let done = false;
-        for (const l of locs) { s.hub.loc = l; for (const n of CD.hubNpcs(s)) {
+        for (const l of locs) { for (const n of CD.hubNpcs(s, l)) {
           const SO = CD.DATA.SOCIAL[n]; if (!SO) continue;
-          if (SO.train && (s.rel[n] || 0) >= (SO.train.minRel || 0) && !s.hub.daily["spar_" + n]) { CD.hubAct(s, "spar", n); done = true; break; }
-          if (!s.hub.daily["talk_" + n]) { CD.hubAct(s, "talk", n); done = true; break; } } if (done) break; }
-        if (!done) CD.hubAct(s, "rest");
+          const sparOk = SO.train && (s.rel[n] || 0) >= (SO.train.minRel || 0) && !s.hub.daily["spar_" + n] && CD.timeLeft(s) >= 135;
+          const talkOk = !s.hub.daily["talk_" + n] && CD.timeLeft(s) >= 30;
+          if (!sparOk && !talkOk) continue;
+          if (s.hub.loc !== l) CD.hubAct(s, "move", l);
+          if (s.hub.loc !== l) break;
+          const before = s.hub.time;
+          if (sparOk) CD.hubAct(s, "spar", n); else CD.hubAct(s, "talk", n);
+          if (s.hub.time !== before || s.hub.daily["talk_" + n]) { done = true; break; } }
+          if (done) break; }
+        if (!done) CD.hubAct(s, "sleep");
       }
       id = sc.go;
     }

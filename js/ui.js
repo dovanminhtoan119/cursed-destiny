@@ -11,7 +11,7 @@
   };
 
   let S = null, tab = "story", combat = null, msgs = [], pick = [], ivIndex = 0, saveNote = "", shopNote = "";
-  let dock = "skill", hubOut = null, giftFor = null, trainOpen = false, confirmEnd = false;
+  let dock = "skill", hubOut = null, giftFor = null, trainOpen = false, confirmEnd = false, shopTab = "items";
 
   /* ---------- lưu ---------- */
   const autosave = () => S && store.set("cd2_auto", CD.exportSave(S));
@@ -50,9 +50,11 @@
     </div></div></div>`;
   }
   const costText = (k) => [k.cost && k.cost.ce ? k.cost.ce + " Chú lực" : "", k.cost && k.cost.sta ? k.cost.sta + " Thể lực" : ""].filter(Boolean).join(" · ") || "Không tốn";
-  function skillDesc(id) {
+  function skillDesc(id, withUp) {
     const k = D.SKILLS[id]; if (!k) return "";
-    return `<div class="skill"><div class="skill-h"><strong>${esc(k.name)}</strong><span>${costText(k)} · Hồi chiêu ${k.cd || 0}</span></div><div class="muted">${esc(k.desc)}</div></div>`;
+    const known = S.skills.includes(id), lv = CD.skillLv(S, id), up = withUp && known ? CD.upgradeCost(S, id) : null;
+    return `<div class="skill"><div class="skill-h"><strong>${esc(k.name)}${known ? ` <em class="lv">Cấp ${lv}/${CD.SKILL_MAX}</em>` : ""}</strong><span>${costText(k)} · Hồi chiêu ${k.cd || 0}</span></div><div class="muted">${esc(k.desc)}${known && lv > 1 ? " Hiệu quả hiện tại ×" + CD.skillMult(S, id).toFixed(1) + "." : ""}</div>
+      ${up ? `<div class="uprow"><span class="muted">Lên cấp ${lv + 1}: ${up.price.toLocaleString("vi-VN")} ${up.cur === "sp" ? "ĐHT" : "¥"} · cần Lv ${up.needLv} · +10% hiệu quả</span><button class="ghost sm" data-upgrade="${id}" ${S.level >= up.needLv && S.currency[up.cur] >= up.price ? "" : "disabled"}>Nâng cấp</button></div>` : withUp && known ? `<div class="uprow"><span class="muted">Đã đạt cấp tối đa.</span></div>` : ""}</div>`;
   }
   const SRC = { patk: "Vật lý", cpow: "Chú lực", hybrid: "Lai" };
   function shortFx(sk) {
@@ -79,7 +81,7 @@
   }
 
   /* ---------- PHÔNG CẢNH ---------- */
-  function hubEnv() { const L = CD.hubDef(S).locations[S.hub.loc]; const indoor = L.env === "dojo" || L.env === "morgue"; return { t: indoor ? "indoor" : CD.SLOT_TIME[S.hub.slot], p: L.env }; }
+  function hubEnv() { const L = CD.hubDef(S).locations[S.hub.loc]; const indoor = L.env === "dojo" || L.env === "morgue"; return { t: indoor ? "indoor" : CD.skyOf(S.hub.time), p: L.env }; }
   function stage(cast, envOverride) {
     const env = envOverride || CD.ART.env(S.scene);
     return `<div class="stage t-${env.t}">${CD.ART.backdrop(S.scene, envOverride)}<span class="tchip">${CD.ART.TIME_LABEL[env.t]} · ${esc(S.time.label)}</span>
@@ -154,24 +156,30 @@
     const H = CD.hubDef(S), h = S.hub, L = H.locations[h.loc], over = CD.hubOver(S);
     const npcs = over ? [] : CD.hubNpcs(S);
     let out = stage(["shen"].concat(npcs), hubEnv());
-    out += `<div class="hubbar"><div><strong>${esc(H.name)}</strong><span>${over ? "Đã hết thời gian tự do" : `Ngày ${H.days - h.daysLeft + 1}/${H.days} · ${CD.SLOTS[h.slot]}`}</span></div><div class="slots">${CD.SLOTS.map((n, i) => `<i class="${over || i < h.slot ? "used" : i === h.slot ? "now" : ""}">${n}</i>`).join("")}</div></div>`;
-    if (h.daysLeft === H.days && h.slot === 0 && !hubOut) out += `<article class="scene compact"><p class="chap">${esc(sc.chapter)}</p><div class="text">${sc.text.map(line).join("")}<p>${esc(H.intro)}</p></div></article>`;
+    const pct = ((h.time - CD.DAY_START) / (CD.DAY_END - CD.DAY_START)) * 100;
+    out += `<div class="hubbar"><div><strong>${esc(H.name)}</strong><span>${over ? "Đã hết thời gian tự do" : `Ngày ${H.days - h.daysLeft + 1}/${H.days} · còn ${CD.dur(CD.timeLeft(S))} hôm nay`}</span></div>
+      ${over ? "" : `<div class="clock"><b>${CD.clock(h.time)}</b><span>${CD.SLOTS[CD.slotOf(h.time)]}</span></div>`}
+      ${over ? "" : `<div class="dayline"><i style="width:${pct}%"></i>${[12, 18].map((hh) => `<em style="left:${((hh * 60 - CD.DAY_START) / (CD.DAY_END - CD.DAY_START)) * 100}%">${hh}:00</em>`).join("")}</div>`}</div>`;
+    if (h.daysLeft === H.days && h.time === CD.DAY_START && !hubOut) out += `<article class="scene compact"><p class="chap">${esc(sc.chapter)}</p><div class="text">${sc.text.map(line).join("")}<p>${esc(H.intro)}</p></div></article>`;
     out += msgBox(msgs);
-    if (hubOut) out += `<div class="event">${hubOut.text.map(line).join("")}${msgBox(hubOut.msgs)}</div>`;
+    if (hubOut && (hubOut.text.length || hubOut.msgs.length)) out += `<div class="event">${hubOut.clock ? `<p class="evclock">${esc(hubOut.clock)}</p>` : ""}${hubOut.text.map(line).join("")}${msgBox(hubOut.msgs)}</div>`;
     if (over) return out + `<div class="choices"><button class="primary" data-go="${sc.go}">Tiếp tục cốt truyện</button></div>`;
     // Địa điểm
-    out += `<p class="label">Địa điểm (di chuyển không tốn thời gian)</p><div class="locs">${Object.entries(H.locations).map(([id, l]) => {
+    const canMove = CD.canSpend(S, "move");
+    out += `<p class="label">Địa điểm · di chuyển 15 phút</p><div class="locs">${Object.entries(H.locations).map(([id, l]) => {
       const here = id === h.loc, ev = CD.exploreEvents(S, id).length, people = CD.hubNpcs(S, id).length;
-      return `<button class="loc ${here ? "on" : ""}" data-move="${id}"><span>${esc(l.name)}</span><small>${people ? people + " người" : ""}${ev ? (people ? " · " : "") + "có gì đó" : ""}</small></button>`;
+      return `<button class="loc ${here ? "on" : ""}" data-move="${id}" ${here || !canMove ? (here ? "" : "disabled") : ""}><span>${esc(l.name)}</span><small>${here ? "Đang ở đây · " : ""}${people ? people + " người" : ""}${ev ? (people ? " · " : "") + "có gì đó" : ""}</small></button>`;
     }).join("")}</div>`;
     // Hoạt động tại chỗ
     const evs = CD.exploreEvents(S).length;
+    const cs = (k) => (CD.canSpend(S, k) ? "" : "disabled");
     out += `<p class="label">Tại ${esc(L.name)}</p><div class="acts">
-      <button class="act" data-hub="explore"><span>Khám phá</span><small>${evs ? "Có điều gì đó ở đây" : "Không còn gì đặc biệt"}</small></button>
-      <button class="act" data-train-open><span>Luyện tập một mình</span><small>${h.trains}/${H.trainCap} buổi</small></button>
-      <button class="act" data-hub="rest"><span>Nghỉ ngơi</span><small>Hồi đầy HP, CL, TL</small></button>
-      <button class="act item" data-tab="shop"><span>Cửa hàng</span><small>Không tốn thời gian</small></button></div>`;
-    if (trainOpen) out += `<div class="panel"><p class="label">Luyện chỉ số nào? (+1 cơ bản, +${30 * S.level} EXP)</p><div class="row">${CD.STATS.map((k) => `<button class="ghost sm" data-train="${k}" ${h.trains >= H.trainCap ? "disabled" : ""}>${k}</button>`).join("")}</div></div>`;
+      <button class="act" data-hub="explore" ${cs("explore")}><span>Khám phá</span><small class="fx">1 giờ</small><small>${evs ? "Có điều gì đó ở đây" : "Không còn gì đặc biệt"}</small></button>
+      <button class="act" data-train-open ${cs("train")}><span>Luyện tập một mình</span><small class="fx">1 giờ / lần</small><small>${h.trains}/${H.trainCap} lần trong đợt</small></button>
+      <button class="act" data-hub="nap" ${cs("nap")}><span>Nghỉ ngơi</span><small class="fx">1 giờ</small><small>+30% HP, +50% CL và TL</small></button>
+      <button class="act" data-hub="sleep"><span>Đi ngủ</span><small class="fx">Sang 07:00 hôm sau</small><small>Hồi phục hoàn toàn</small></button>
+      <button class="act item" data-tab="shop"><span>Cửa hàng & kỹ năng</span><small>Không tốn thời gian</small></button></div>`;
+    if (trainOpen) out += `<div class="panel"><p class="label">Luyện chỉ số nào? (1 giờ · +1 cơ bản · +${15 * S.level} EXP)</p><div class="row">${CD.STATS.map((k) => `<button class="ghost sm" data-train="${k}" ${h.trains >= H.trainCap || !CD.canSpend(S, "train") ? "disabled" : ""}>${k}</button>`).join("")}</div></div>`;
     // NPC
     if (npcs.length) out += `<p class="label">Người ở đây</p>` + npcs.map(npcPanel).join("");
     out += `<div class="endhub">${confirmEnd ? `<p class="muted">Bỏ qua ${h.daysLeft} ngày còn lại?</p><button class="primary" data-hub-end-yes>Xác nhận tiếp tục cốt truyện</button>` : `<button class="ghost sm" data-hub-end>Kết thúc sớm thời gian tự do</button>`}</div>`;
@@ -188,9 +196,9 @@
       ${bar(Math.max(0, rel), 100, "rel")}
       ${next ? `<div class="mini">Mốc tiếp theo: ${next.rel} — ${esc(next.text)}</div>` : ""}
       <div class="row">
-        <button class="ghost sm" data-talk="${id}" ${talked ? "disabled" : ""}>Trò chuyện</button>
-        <button class="ghost sm" data-gift-open="${id}" ${gifted || !gifts.length ? "disabled" : ""}>Tặng quà${gifts.length ? "" : " (chưa có)"}</button>
-        ${SO.train ? `<button class="ghost sm" data-spar="${id}" ${!canSpar || spar ? "disabled" : ""}>Luyện cùng (${SO.train.stats.join("/")})${canSpar ? "" : " · cần " + SO.train.minRel}</button>` : ""}
+        <button class="ghost sm" data-talk="${id}" ${talked || !CD.canSpend(S, "talk") ? "disabled" : ""}>Trò chuyện · 15 phút</button>
+        <button class="ghost sm" data-gift-open="${id}" ${gifted || !gifts.length || !CD.canSpend(S, "gift") ? "disabled" : ""}>Tặng quà · 10 phút${gifts.length ? "" : " (chưa có quà)"}</button>
+        ${SO.train ? `<button class="ghost sm" data-spar="${id}" ${!canSpar || spar || !CD.canSpend(S, "spar") ? "disabled" : ""}>Luyện cùng (${SO.train.stats.join("/")}) · 2 giờ${canSpar ? "" : " · cần quan hệ " + SO.train.minRel}</button>` : ""}
       </div>
       ${giftFor === id ? `<div class="row gifts">${gifts.map((g) => `<button class="ghost sm ${(SO.likes || []).includes(g.id) ? "liked" : ""}" data-gift="${g.id}">${esc(D.ITEMS[g.id].name)} ×${g.qty}</button>`).join("")}</div>` : ""}
     </div></div></div>`;
@@ -237,16 +245,31 @@
       <div class="seg">${[["skill", "Kỹ năng"], ["item", "Vật phẩm" + (items.length ? " (" + items.reduce((a, x) => a + x.qty, 0) + ")" : "")], ["other", "Khác"]].map(([k, n]) => `<button data-dock="${k}" class="${dock === k ? "on" : ""}">${n}</button>`).join("")}</div>
       <div class="acts">${dock === "skill" ? list.map((x) => {
         const can = !x.cd && CD.combat.affordable(S, x.sk);
-        return `<button class="act ${x.sk.tech ? "tech" : ""}" data-skill="${x.id}" ${can ? "" : "disabled"}><span>${esc(x.sk.name)}</span><small class="fx">${esc(shortFx(x.sk))}</small><small>${x.cd ? "Hồi chiêu " + x.cd + " lượt" : costText(x.sk)}</small></button>`;
+        return `<button class="act ${x.sk.tech ? "tech" : ""}" data-skill="${x.id}" ${can ? "" : "disabled"}><span>${esc(x.sk.name)}${CD.skillLv(S, x.id) > 1 ? " <em class=\"lv\">C" + CD.skillLv(S, x.id) + "</em>" : ""}</span><small class="fx">${esc(shortFx(x.sk))}</small><small>${x.cd ? "Hồi chiêu " + x.cd + " lượt" : costText(x.sk)}</small></button>`;
       }).join("") : dock === "item" ? (items.map((x) => `<button class="act item" data-use="${x.id}"><span>${esc(D.ITEMS[x.id].name)} ×${x.qty}</span><small>${esc(D.ITEMS[x.id].lore)}</small></button>`).join("") || `<p class="muted">Không có vật phẩm dùng được trong trận.</p>`)
         : c.enemies.map((e, i) => e.hp > 0 && !c.observed.includes(e.id) ? `<button class="act" data-observe="${i}"><span>Quan sát ${esc(e.name)}</span><small>Miễn phí, không tốn lượt</small></button>` : "").join("") + (canFlee ? `<button class="act flee" data-flee><span>Bỏ chạy</span><small>Dựa trên chênh lệch AGI</small></button>` : `<p class="muted">Trận này không thể bỏ chạy.</p>`)}</div></div>`;
     return h;
   }
 
   /* ---------- TAB: CỬA HÀNG ---------- */
+  function skillShopView() {
+    const inHub = !!(S.hub && !CD.hubOver(S));
+    const group = (cur, title, note) => `<section class="panel"><p class="label">${title}</p><p class="muted">${note}</p>${D.SKILL_SHOP.filter((e) => e.cur === cur).map((e) => {
+      const k = D.SKILLS[e.id], known = S.skills.includes(e.id), c = CD.canLearn(S, e.id);
+      const req = [CD.reqText(e.req), e.req && e.req.rank ? "Rank " + e.req.rank : ""].filter(Boolean).join(", ");
+      return `<div class="skill"><div class="skill-h"><strong>${esc(k.name)}</strong><span>${costText(k)} · Hồi chiêu ${k.cd || 0}</span></div>
+        <div class="muted">${esc(k.desc)}</div><div class="uprow"><span class="muted">Dạy bởi: ${esc(e.by)}${req ? " · Cần " + esc(req) : ""}</span>
+        ${known ? `<em class="lv">Đã học · Cấp ${CD.skillLv(S, e.id)}</em>` : `<button class="ghost sm buy" data-learn="${e.id}" ${c.ok ? "" : "disabled"} title="${esc(c.msg || "")}">${e.price.toLocaleString("vi-VN")} ${cur === "sp" ? "ĐHT" : "¥"}</button>`}</div>
+        ${!known && !c.ok && c.msg && !/Không đủ/.test(c.msg) ? `<div class="mini">${esc(c.msg)}</div>` : ""}</div>`;
+    }).join("")}</section>`;
+    return group("sp", "Hệ thống truyền thụ · Điểm Hệ thống", "Học mọi lúc ngoài trận đấu.") +
+      group("yen", "Giảng dạy tại Học viện · yên", inHub ? "Đang trong thời gian tự do: có thể học." : "Chỉ học được trong thời gian tự do.");
+  }
   function shopView() {
     let h = msgBox(shopNote ? [shopNote] : []);
     h += `<div class="wallet"><span><b>${S.currency.sp}</b> Điểm Hệ thống</span><span><b>${S.currency.yen.toLocaleString("vi-VN")}</b> yên</span></div>`;
+    h += `<div class="seg page">${[["items", "Vật phẩm"], ["skills", "Kỹ năng"]].map(([k, n]) => `<button data-shoptab="${k}" class="${shopTab === k ? "on" : ""}">${n}</button>`).join("")}</div>`;
+    if (shopTab === "skills") return h + skillShopView();
     Object.entries(D.SHOPS).forEach(([sid, sh]) => {
       const open = CD.shopOpen(S, sid);
       h += `<section class="panel"><p class="label">${esc(sh.name)}${open ? "" : " · đóng cửa"}</p><p class="muted">${esc(sh.desc)}</p>${sh.items.map((x) => {
@@ -284,7 +307,8 @@
       ${S.restriction ? `<p class="label">Thiên dữ chú phược</p><div class="skill"><strong>${esc(D.RESTRICTIONS[S.restriction].name)}</strong><div class="muted">${esc(D.RESTRICTIONS[S.restriction].desc)}</div></div>` : ""}</section>`;
     if (S.technique) { const t = D.TECHNIQUES[S.technique];
       h += `<section class="panel"><p class="label">Thuật thức · ${esc(t.name)}</p><p class="muted">${esc(t.desc)}</p><ol class="tree">${t.tree.map((x, i) => `<li class="${i === 0 ? "cur" : ""}">${esc(x)}</li>`).join("")}<li class="hid">Nhánh ẩn: ???</li></ol></section>`; }
-    h += `<section class="panel"><p class="label">Kỹ năng</p>${S.skills.map((k) => skillDesc(k)).join("")}</section>`;
+    h += msgBox(shopNote && tab === "char" ? [shopNote] : []);
+    h += `<section class="panel"><p class="label">Kỹ năng · mỗi cấp +10% hiệu quả, tối đa cấp ${CD.SKILL_MAX}</p>${S.skills.map((k) => skillDesc(k, true)).join("")}<button class="ghost sm" data-tab="shop" data-shoptab="skills">Học thêm kỹ năng</button></section>`;
     h += `<section class="panel"><p class="label">Thành tựu</p>${S.achievements.map((a) => `<div>★ ${esc(D.ACHIEVEMENTS[a])}</div>`).join("") || `<p class="muted">Chưa có.</p>`}</section>`;
     return h;
   }
@@ -352,7 +376,10 @@
   document.addEventListener("click", (ev) => {
     const b = ev.target.closest("button"); if (!b || b.disabled) return;
     const ds = b.dataset;
-    if (ds.tab) { tab = ds.tab; saveNote = ""; shopNote = ""; render(); window.scrollTo({ top: 0 }); return; }
+    if (ds.tab) { tab = ds.tab; if (ds.shoptab) shopTab = ds.shoptab; saveNote = ""; shopNote = ""; render(); window.scrollTo({ top: 0 }); return; }
+    if (ds.shoptab) { keepScroll(() => { shopTab = ds.shoptab; shopNote = ""; }); return; }
+    if (ds.learn) { keepScroll(() => { const r = CD.learnSkill(S, ds.learn); shopNote = r.ok ? r.msgs.join(" · ") : r.msg; autosave(); }); return; }
+    if (ds.upgrade) { keepScroll(() => { const r = CD.upgradeSkill(S, ds.upgrade); shopNote = r.ok ? r.msgs.join(" · ") : r.msg; autosave(); }); return; }
     if (ds.choice !== undefined) { const r = CD.choose(S, S.scene, +ds.choice); if (r) { const m = r.msgs; go(r.go); msgs = m.concat(msgs); render(); } return; }
     if (ds.go) { go(ds.go); return; }
     if (ds.trait) { keepScroll(() => { const i = pick.indexOf(ds.trait); if (i >= 0) pick.splice(i, 1); else if (pick.length < 2) pick.push(ds.trait); }); return; }
@@ -368,7 +395,7 @@
     if (ds.useOut) { keepScroll(() => { msgs = [CD.useItem(S, ds.useOut, false)]; autosave(); }); return; }
     if (ds.buy) { keepScroll(() => { const [sid, id] = ds.buy.split(":"); const r = CD.buy(S, sid, id); shopNote = r.ok ? r.msgs.join(" · ") : r.msg; autosave(); }); return; }
     // Khu tự do
-    if (ds.move) { keepScroll(() => { CD.hubAct(S, "move", ds.move); hubOut = null; giftFor = null; trainOpen = false; msgs = []; autosave(); }); return; }
+    if (ds.move) { if (ds.move === S.hub.loc) return; keepScroll(() => { hubOut = CD.hubAct(S, "move", ds.move); giftFor = null; trainOpen = false; msgs = []; autosave(); }); return; }
     if (ds.trainOpen !== undefined) { keepScroll(() => (trainOpen = !trainOpen)); return; }
     if (ds.giftOpen) { keepScroll(() => (giftFor = giftFor === ds.giftOpen ? null : ds.giftOpen)); return; }
     const hubDo = (kind, a, b2) => {
@@ -383,7 +410,7 @@
     if (ds.spar) { hubDo("spar", ds.spar); return; }
     if (ds.gift) { hubDo("gift", giftFor, ds.gift); return; }
     if (ds.hubEnd !== undefined) { keepScroll(() => (confirmEnd = true)); return; }
-    if (ds.hubEndYes !== undefined) { S.hub.daysLeft = 0; S.hub.slot = 0; autosave(); render(); return; }
+    if (ds.hubEndYes !== undefined) { S.hub.daysLeft = 0; S.hub.time = CD.DAY_START; autosave(); render(); return; }
     if (ds.hubBack !== undefined) { combat = null; render(); window.scrollTo({ top: 0 }); return; }
     // Chiến đấu
     if (combat && !combat.over) {

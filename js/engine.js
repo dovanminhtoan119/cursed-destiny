@@ -74,7 +74,7 @@
       milestonesHit: [],
       ledger: [], txDone: [], log: [],
       known: [],
-      hub: null, hubFight: null, shopBought: {}, pendingRank: null, rankHistory: [],
+      hub: null, hubFight: null, shopBought: {}, pendingRank: null, rankHistory: [], skillLv: {},
     };
     CD.recalc(s, true);
     return s;
@@ -375,29 +375,40 @@
     });
   };
 
-  /* ---------- THỜI GIAN TỰ DO (HUB) ---------- */
+  /* ---------- THỜI GIAN TỰ DO (HUB) — tính theo đồng hồ ----------
+     Một ngày hoạt động từ 07:00 tới 23:00. Mỗi hành động tốn một khoảng thời gian cố định. */
   CD.SLOTS = ["Sáng", "Chiều", "Tối"];
-  CD.SLOT_TIME = ["day", "dusk", "night"];
+  CD.DAY_START = 7 * 60; CD.DAY_END = 23 * 60;
+  CD.ACT_MIN = { move: 15, talk: 15, gift: 10, train: 60, explore: 60, nap: 60, spar: 120 };
+  CD.ACT_NAME = { move: "Di chuyển", talk: "Trò chuyện", gift: "Tặng quà", train: "Luyện tập", explore: "Khám phá", nap: "Nghỉ ngơi", spar: "Luyện cùng" };
+  CD.clock = (m) => String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+  CD.dur = (m) => (m >= 60 ? Math.floor(m / 60) + " giờ" + (m % 60 ? " " + (m % 60) + " phút" : "") : m + " phút");
+  CD.slotOf = (m) => (m < 12 * 60 ? 0 : m < 18 * 60 ? 1 : 2);           // buổi quyết định NPC có mặt
+  CD.skyOf = (m) => (m < 17 * 60 ? "day" : m < 19 * 60 ? "dusk" : "night"); // phông cảnh
   CD.enterHub = function (s, hubId) {
     const H = D().HUBS[hubId];
-    if (!s.hub || s.hub.id !== hubId) s.hub = { id: hubId, daysLeft: H.days, slot: 0, loc: H.start, trains: 0, daily: {}, seen: [] };
+    if (!s.hub || s.hub.id !== hubId) s.hub = { id: hubId, daysLeft: H.days, time: CD.DAY_START, slot: 0, loc: H.start, trains: 0, daily: {}, seen: [] };
+    if (s.hub.time == null) s.hub.time = CD.DAY_START + (s.hub.slot || 0) * 300; // bản lưu cũ theo buổi
+    s.hub.slot = CD.slotOf(s.hub.time);
     return s.hub;
   };
   CD.hubDef = (s) => s.hub && D().HUBS[s.hub.id];
   CD.hubNpcs = function (s, loc) {
     const L = CD.hubDef(s).locations[loc || s.hub.loc], n = L.npcs || [];
-    return (Array.isArray(n[0]) ? n[s.hub.slot] || [] : n).filter((id) => !(D().SOCIAL[id] && D().SOCIAL[id].hideIf && s.flags.includes(D().SOCIAL[id].hideIf)));
+    return (Array.isArray(n[0]) ? n[CD.slotOf(s.hub.time)] || [] : n).filter((id) => !(D().SOCIAL[id] && D().SOCIAL[id].hideIf && s.flags.includes(D().SOCIAL[id].hideIf)));
   };
-  CD.hubAdvance = function (s) {
-    const h = s.hub, msgs = [];
-    h.slot++;
-    if (h.slot > 2) {
-      h.slot = 0; h.daysLeft--; h.daily = {}; s.time.day++;
-      const d = CD.derived(s);
-      s.cur.hp = Math.min(d.maxHP, s.cur.hp + Math.floor(d.maxHP * 0.5)); s.cur.ce = d.maxCE; s.cur.sta = d.maxSTA;
-      msgs.push("Một ngày mới. Hồi 50% HP, hồi đầy Chú lực và Thể lực." + (h.daysLeft > 0 ? " Còn " + h.daysLeft + " ngày." : ""));
-    }
-    return msgs;
+  CD.timeLeft = (s) => CD.DAY_END - s.hub.time;
+  CD.canSpend = (s, kind) => CD.timeLeft(s) >= (CD.ACT_MIN[kind] || 0);
+  CD.newDay = function (s, slept) {
+    const h = s.hub, d = CD.derived(s);
+    h.daysLeft--; h.daily = {}; h.time = CD.DAY_START; h.slot = 0; s.time.day++;
+    s.cur.hp = d.maxHP; s.cur.ce = d.maxCE; s.cur.sta = d.maxSTA;
+    return [(slept ? "Shen đi ngủ." : "23:00, Shen mệt lả và ngủ thiếp đi.") + " Một ngày mới bắt đầu lúc 07:00, hồi phục hoàn toàn." + (h.daysLeft > 0 ? " Còn " + h.daysLeft + " ngày." : " Hết thời gian tự do.")];
+  };
+  CD.hubAdvance = function (s, minutes) {
+    const h = s.hub;
+    h.time += minutes; h.slot = CD.slotOf(h.time);
+    return h.time >= CD.DAY_END ? CD.newDay(s, false) : [];
   };
   CD.hubOver = (s) => s.hub && s.hub.daysLeft <= 0;
   /* Kết thúc trận trong khu tự do: thắng thì nhận thưởng sự kiện, thua/chạy thì sự kiện còn đó để thử lại */
@@ -411,28 +422,36 @@
     return msgs;
   };
   CD.exploreEvents = function (s, loc) {
-    const L = CD.hubDef(s).locations[loc || s.hub.loc];
-    return (L.events || []).filter((e) => !s.txDone.includes("ev_" + e.id) && CD.meets(s, e.req) && (!e.slot || e.slot.includes(s.hub.slot)));
+    const L = CD.hubDef(s).locations[loc || s.hub.loc], slot = CD.slotOf(s.hub.time);
+    return (L.events || []).filter((e) => !s.txDone.includes("ev_" + e.id) && CD.meets(s, e.req) && (!e.slot || e.slot.includes(slot)));
   };
-  /* kind: rest | train | explore | talk | gift | spar */
+  /* kind: move | talk | gift | train | explore | nap | spar | sleep */
   CD.hubAct = function (s, kind, arg, arg2, rng) {
     rng = rng || Math.random;
     const h = s.hub, H = CD.hubDef(s), out = { msgs: [], text: [] };
     if (CD.hubOver(s)) { out.msgs.push("Hết thời gian tự do."); return out; }
-    if (kind === "move") { if (H.locations[arg]) h.loc = arg; return out; }
-    if (kind === "rest") {
-      const d = CD.derived(s); s.cur.hp = d.maxHP; s.cur.ce = d.maxCE; s.cur.sta = d.maxSTA;
-      out.text.push("Shen nghỉ ngơi một buổi. Cơ thể hồi phục hoàn toàn.");
+    if (kind === "sleep") { out.msgs.push(...CD.newDay(s, true)); return out; }
+    if (!CD.canSpend(s, kind)) { out.msgs.push("Không đủ thời gian hôm nay (" + CD.ACT_NAME[kind] + " cần " + CD.dur(CD.ACT_MIN[kind]) + ", còn " + CD.dur(CD.timeLeft(s)) + "). Hãy đi ngủ."); return out; }
+    if (kind === "move") {
+      if (!H.locations[arg] || arg === h.loc) return out;
+      h.loc = arg; out.msgs.push("Di chuyển tới " + H.locations[arg].name + " (15 phút).");
+    } else if (kind === "nap") {
+      const d = CD.derived(s), b = s.cur.hp;
+      s.cur.hp = Math.min(d.maxHP, s.cur.hp + Math.floor(d.maxHP * 0.3)); s.cur.ce = Math.min(d.maxCE, s.cur.ce + Math.floor(d.maxCE * 0.5)); s.cur.sta = Math.min(d.maxSTA, s.cur.sta + Math.floor(d.maxSTA * 0.5));
+      out.text.push("Shen chợp mắt một tiếng."); out.msgs.push("HP " + b + " → " + s.cur.hp + ", hồi 50% Chú lực và Thể lực.");
     } else if (kind === "train") {
-      if (h.trains >= H.trainCap) { out.msgs.push("Đã đạt giới hạn luyện tập trong đợt này (" + H.trainCap + " buổi). Cơ thể cần thời gian thích nghi."); return out; }
+      if (h.trains >= H.trainCap) { out.msgs.push("Đã đạt giới hạn luyện tập trong đợt này (" + H.trainCap + " giờ hiệu quả). Cơ thể cần thời gian thích nghi."); return out; }
       h.trains++;
       s.base[arg] += 1;
-      out.text.push("Shen dành cả buổi luyện " + CD.STAT_NAME[arg].toLowerCase() + ".");
-      out.msgs.push(arg + " cơ bản +1 (buổi " + h.trains + "/" + H.trainCap + ")", ...CD.gainExp(s, 30 * s.level));
+      out.text.push("Shen luyện " + CD.STAT_NAME[arg].toLowerCase() + " suốt một tiếng.");
+      out.msgs.push(arg + " cơ bản +1 (" + h.trains + "/" + H.trainCap + ")", ...CD.gainExp(s, 15 * s.level));
     } else if (kind === "explore") {
       const evs = CD.exploreEvents(s);
-      if (!evs.length) { out.text.push(H.locations[h.loc].idle || "Shen đi một vòng nhưng không có gì đặc biệt."); out.msgs.push(...CD.gainExp(s, 10 * s.level)); }
-      else {
+      if (!evs.length) {
+        out.text.push(H.locations[h.loc].idle || "Shen đi một vòng nhưng không có gì đặc biệt.");
+        const key = "idle_" + h.loc;
+        if (!h.daily[key]) { h.daily[key] = 1; out.msgs.push(...CD.gainExp(s, 5 * s.level)); } else out.msgs.push("Hôm nay đã đi hết chỗ này rồi.");
+      } else {
         const tot = evs.reduce((a, e) => a + (e.w || 1), 0); let r = rng() * tot, ev = evs[0];
         for (const e of evs) { r -= e.w || 1; if (r <= 0) { ev = e; break; } }
         s.txDone.push("ev_" + ev.id); out.event = ev; out.text.push(...ev.text);
@@ -448,7 +467,7 @@
       } else if (!h.daily[key]) {
         h.daily[key] = 1; out.text.push(SO.idle || "Hai người nói chuyện vu vơ một lúc.");
         out.msgs.push(...CD.applyEff(s, { rel: { [arg]: 2 } }));
-      } else { out.msgs.push("Hôm nay đã trò chuyện rồi."); return out; }
+      } else { out.msgs.push("Hôm nay hai người đã nói hết chuyện rồi."); return out; }
     } else if (kind === "gift") {
       const SO = D().SOCIAL[arg], it = s.inventory.find((x) => x.id === arg2), key = "gift_" + arg;
       if (!it) return out; if (h.daily[key]) { out.msgs.push("Hôm nay đã tặng quà rồi."); return out; }
@@ -462,10 +481,48 @@
       if (h.daily[key]) { out.msgs.push("Hôm nay đã luyện cùng rồi."); return out; }
       h.daily[key] = 1; out.text.push(tr.text);
       const b = {}; tr.stats.forEach((k) => (b[k] = 1));
-      out.msgs.push(...CD.applyEff(s, { base: b, rel: { [arg]: 3 }, exp: 40 * s.level }));
+      out.msgs.push(...CD.applyEff(s, { base: b, rel: { [arg]: 3 }, exp: 20 * s.level }));
     }
-    out.msgs.push(...CD.hubAdvance(s));
+    const from = h.time; out.msgs.push(...CD.hubAdvance(s, CD.ACT_MIN[kind]));
+    out.clock = CD.clock(from) + " → " + (h.time === CD.DAY_START && from > h.time ? "07:00 hôm sau" : CD.clock(h.time));
     return out;
+  };
+
+  /* ---------- HỌC & NÂNG CẤP KỸ NĂNG ---------- */
+  CD.SKILL_MAX = 5;
+  CD.skillLv = (s, id) => (s.skillLv && s.skillLv[id]) || 1;
+  CD.skillMult = (s, id) => (id ? 1 + 0.1 * (CD.skillLv(s, id) - 1) : 1); // mỗi cấp +10% hiệu quả
+  CD.skillEntry = (id) => D().SKILL_SHOP.find((x) => x.id === id);
+  CD.canLearn = function (s, id) {
+    const e = CD.skillEntry(id); if (!e) return { ok: false, msg: "Kỹ năng không có trong danh mục." };
+    if (s.skills.includes(id)) return { ok: false, msg: "Đã biết kỹ năng này." };
+    if (e.cur === "yen" && !(s.hub && !CD.hubOver(s))) return { ok: false, msg: "Chỉ học được ở Học viện trong thời gian tự do." };
+    if (e.req && !CD.meets(s, e.req)) return { ok: false, msg: "Chưa đủ điều kiện: " + CD.reqText(e.req) + "." };
+    if (e.req && e.req.rank && CD.rankIndex(s.rank) < CD.rankIndex(e.req.rank)) return { ok: false, msg: "Cần Rank " + e.req.rank + "." };
+    if (s.currency[e.cur] < e.price) return { ok: false, msg: "Không đủ " + (e.cur === "sp" ? "Điểm Hệ thống" : "yên") + "." };
+    return { ok: true };
+  };
+  CD.learnSkill = function (s, id) {
+    const c = CD.canLearn(s, id); if (!c.ok) return c;
+    const e = CD.skillEntry(id), have = s.currency[e.cur];
+    s.currency[e.cur] = have - e.price; s.skills.push(id); s.skillLv = s.skillLv || {}; s.skillLv[id] = 1;
+    return { ok: true, msgs: [(e.cur === "sp" ? "Điểm Hệ thống " : "Yên ") + have + " − " + e.price + " = " + s.currency[e.cur], "Học kỹ năng: " + D().SKILLS[id].name + " (Cấp 1)"] };
+  };
+  /* Giá nâng cấp: kỹ năng trong danh mục dùng đúng loại tiền đã học, bằng 60% giá gốc × cấp hiện tại.
+     Kỹ năng khác (khởi đầu, thuật thức, được dạy) dùng Điểm Hệ thống: 40 × cấp hiện tại. Cần Lv nhân vật ≥ 4 × cấp hiện tại. */
+  CD.upgradeCost = function (s, id) {
+    const lv = CD.skillLv(s, id), e = CD.skillEntry(id);
+    if (lv >= CD.SKILL_MAX) return null;
+    return e ? { cur: e.cur, price: Math.round(e.price * 0.6 * lv), needLv: 4 * lv } : { cur: "sp", price: 40 * lv, needLv: 4 * lv };
+  };
+  CD.upgradeSkill = function (s, id) {
+    if (!s.skills.includes(id)) return { ok: false, msg: "Chưa biết kỹ năng này." };
+    const c = CD.upgradeCost(s, id); if (!c) return { ok: false, msg: "Đã đạt cấp tối đa." };
+    if (s.level < c.needLv) return { ok: false, msg: "Cần Lv " + c.needLv + " để nâng lên cấp " + (CD.skillLv(s, id) + 1) + "." };
+    if (c.cur === "yen" && !(s.hub && !CD.hubOver(s))) return { ok: false, msg: "Kỹ năng Học viện chỉ nâng cấp được trong thời gian tự do." };
+    const have = s.currency[c.cur]; if (have < c.price) return { ok: false, msg: "Không đủ " + (c.cur === "sp" ? "Điểm Hệ thống" : "yên") + ": cần " + c.price + ", có " + have + "." };
+    s.currency[c.cur] = have - c.price; s.skillLv = s.skillLv || {}; s.skillLv[id] = CD.skillLv(s, id) + 1;
+    return { ok: true, msgs: [(c.cur === "sp" ? "Điểm Hệ thống " : "Yên ") + have + " − " + c.price + " = " + s.currency[c.cur], D().SKILLS[id].name + " lên Cấp " + s.skillLv[id] + " (hiệu quả ×" + CD.skillMult(s, id).toFixed(1) + ")"] };
   };
 
   /* ---------- CỬA HÀNG ---------- */
@@ -578,7 +635,7 @@
       const m = CD.mods(s), eff = CD.effective(s).stats, d = CD.derive(eff, s.level, m);
       const t = this.target(c);
       const L = c.log; L.length = 0; c.hits = { foe: {}, me: 0 }; c.history = c.history || [];
-      c.guard = false;
+      c.guard = 0;
       if (action.type === "flee") {
         const p = Math.min(0.9, 0.3 + (eff.AGI - t.stats.AGI) * 0.03);
         if (!c.opts.canFlee) { L.push("Không có đường thoát."); }
@@ -595,35 +652,42 @@
         }
         if (sk.tech && m.techHpCost) { const loss = Math.floor(s.cur.hp * m.techHpCost); s.cur.hp = Math.max(1, s.cur.hp - loss); L.push("Khế ước Mệnh Đổi Mệnh: −" + loss + " HP."); }
         if (sk.cd) c.cds[action.id] = sk.cd + 1;
-        this.resolveSkill(s, c, sk, t, d, m, rng);
+        this.resolveSkill(s, c, sk, t, d, m, rng, action.id);
       }
       this.after(s, c, rng);
     },
-    resolveSkill(s, c, sk, t, d, m, rng) {
-      const L = c.log, e = sk.effect || {};
-      if (e.guard) { c.guard = true; L.push("Shen thủ thế, giảm 50% sát thương lượt này."); }
+    resolveSkill(s, c, sk, t, d, m, rng, skId) {
+      const L = c.log, e = sk.effect || {}, lvm = CD.skillMult(s, skId);
+      if (e.guard) { c.guard = 0.5; L.push("Shen thủ thế, giảm 50% sát thương lượt này."); }
+      if (e.guardPct) { c.guard = e.guardPct; L.push(sk.name + ": giảm " + Math.round(e.guardPct * 100) + "% sát thương lượt này."); }
       if (e.store) { c.reflectArmed = true; L.push("Mặt gương chú lực dựng lên, sẵn sàng hứng đòn."); }
+      if (e.heal) { const dd = CD.derived(s), b = s.cur.hp; s.cur.hp = Math.min(dd.maxHP, s.cur.hp + Math.floor(dd.maxHP * e.heal * lvm)); L.push(sk.name + ": hồi " + (s.cur.hp - b) + " HP."); }
+      if (e.restore) { const dd = CD.derived(s), b = s.cur.ce; s.cur.ce = Math.min(dd.maxCE, s.cur.ce + Math.floor(e.restore * lvm)); L.push(sk.name + ": hồi " + (s.cur.ce - b) + " Chú lực."); }
+      if (e.focus) { c.focus = e.focus; L.push(sk.name + ": đòn tấn công kế tiếp" + (e.focus.mult > 1 ? " ×" + e.focus.mult : "") + (e.focus.crit ? ", chắc chắn chí mạng" : "") + (e.focus.sure ? ", không thể né" : "") + "."); }
       if (e.dmg) {
-        const teva = Math.min(0.4, (0.4 * t.stats.AGI) / (t.stats.AGI + 100));
-        if (!e.sure && rng() < teva) { L.push(t.name + " né được " + sk.name + "."); }
-        else {
+        const focus = c.focus; c.focus = null;
+        const hits = e.hits || 1;
+        for (let h = 0; h < hits && t.hp > 0; h++) {
+          const teva = Math.min(0.4, (0.4 * t.stats.AGI) / (t.stats.AGI + 100));
+          if (!e.sure && !(focus && focus.sure) && rng() < teva) { L.push(t.name + " né được " + sk.name + (hits > 1 ? " (đòn " + (h + 1) + ")" : "") + "."); continue; }
           let atk = e.dmg.src === "cpow" ? d.cpow : e.dmg.src === "hybrid" ? d.patk + 0.5 * d.cpow : d.patk;
-          let mult = e.dmg.mult;
+          let mult = e.dmg.mult * lvm * (focus ? focus.mult || 1 : 1);
           if (e.detonate) { mult *= 1 + t.marks; L.push("Kích nổ " + t.marks + " ấn."); t.marks = 0; }
           if (e.release) { atk += c.stored; L.push("Trả lại " + c.stored + " sát thương đã hứng."); c.stored = 0; }
-          const def = e.dmg.src === "patk" ? t.d.pdef : t.d.cdef;
-          const crit = rng() < d.crit;
+          let def = e.dmg.src === "patk" ? t.d.pdef : t.d.cdef;
+          if (e.pierce) def *= 1 - e.pierce;
+          const crit = (focus && focus.crit) || rng() < d.crit;
           const mod = (e.dmg.src === "patk" ? m.dmgPhys : m.dmgCurse) * (s.traits.includes("ychi") && s.cur.hp < CD.derived(s).maxHP * 0.25 ? 1.2 : 1);
           const dmg = CD.calcDamage(atk, mult, def, { crit, mod });
           t.hp -= dmg; c.hits.foe[c.enemies.indexOf(t)] = (c.hits.foe[c.enemies.indexOf(t)] || 0) + dmg;
-          L.push(sk.name + " gây " + dmg + " sát thương" + (crit ? " (CHÍ MẠNG)" : "") + " lên " + t.name + ".");
+          L.push(sk.name + (hits > 1 ? " (đòn " + (h + 1) + ")" : "") + " gây " + dmg + " sát thương" + (crit ? " (CHÍ MẠNG)" : "") + " lên " + t.name + ".");
           if (e.mark) { t.marks = Math.min(3, t.marks + 1); L.push("Ấn khắc trên " + t.name + ": " + t.marks + "/3."); }
           if (e.drain) { const g = Math.floor(dmg * e.drain); s.cur.ce = Math.min(CD.derived(s).maxCE, s.cur.ce + g); L.push("Nuốt " + g + " chú lực."); }
-          if (e.debuff) { t.debuff.push({ ...e.debuff }); L.push(t.name + " bị " + e.debuff.label + " trong " + e.debuff.turns + " lượt."); }
+          if (e.debuff && h === 0) { t.debuff.push({ ...e.debuff }); L.push(t.name + " bị " + e.debuff.label + " trong " + e.debuff.turns + " lượt."); }
         }
       }
-      if (e.stun) { if (rng() < e.stun) { t.stun = 1; L.push(t.name + " bị trói, mất lượt kế tiếp."); } else L.push(t.name + " giật đứt sợi chỉ."); }
-      if (e.blind) { t.debuff.push({ stat: "hit", pct: e.blind, turns: 2, label: "lóa mắt" }); L.push(t.name + " bị lóa mắt 2 lượt."); }
+      if (e.stun) { if (rng() < e.stun) { t.stun = 1; L.push(t.name + " bị trói, mất lượt kế tiếp."); } else L.push(t.name + " thoát được."); }
+      if (e.blind) { t.debuff.push({ stat: "hit", pct: e.blind, turns: 2, label: "lóa mắt" }); L.push(t.name + " bị giảm khả năng đánh trúng 2 lượt."); }
     },
     after(s, c, rng) {
       const L = c.log;
@@ -645,7 +709,7 @@
         const def = sk.src === "cpow" ? pd.cdef : pd.pdef;
         let dmg = CD.calcDamage(atk, sk.mult, def, { crit: rng() < e.d.crit });
         if (c.reflectArmed) { const st = Math.floor(dmg * 0.6); c.stored += st; dmg -= st; c.reflectArmed = false; L.push("Gương chú lực hứng " + st + " sát thương."); }
-        if (c.guard) dmg = Math.floor(dmg / 2);
+        if (c.guard) dmg = Math.floor(dmg * (1 - c.guard));
         s.cur.hp -= dmg; c.hits.me += dmg;
         L.push(e.name + " dùng " + sk.name + ": −" + dmg + " HP.");
         if (s.cur.hp <= 0 && s.traits.includes("ychi") && !c.ychiUsed) { s.cur.hp = 1; c.ychiUsed = true; L.push("Ý Chí Bất Khuất: Shen trụ lại với 1 HP!"); }

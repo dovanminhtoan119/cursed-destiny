@@ -24,6 +24,18 @@
     tk_dongHoa: { tech: true, name: "Chú Thể Đồng Hóa", cost: { ce: 25 }, cd: 3, effect: { dmg: { src: "cpow", mult: 1.5 }, drain: 1.0 }, desc: "Uy lực ×1.5, hút lại 100% sát thương thành Chú lực. Tốn 25 Chú lực, hồi chiêu 3 lượt." },
     tk_lienphat: { tech: true, name: "Quang Tiễn Liên Phát", cost: { ce: 32 }, cd: 2, effect: { dmg: { src: "cpow", mult: 2.4 } }, desc: "Uy lực ×2.4. Tốn 32 Chú lực, hồi chiêu 2 lượt." },
   });
+  Object.assign(D.SKILLS, {
+    sk_kick: { name: "Cú đá xoay", cost: { sta: 15 }, cd: 1, effect: { dmg: { src: "patk", mult: 2.0 } }, desc: "Tấn công vật lý ×2.0. Tốn 15 Thể lực, hồi chiêu 1 lượt." },
+    sk_combo: { name: "Liên quyền", cost: { sta: 18 }, cd: 2, effect: { dmg: { src: "patk", mult: 1.1 }, hits: 2 }, desc: "Hai đòn liên tiếp, mỗi đòn Tấn công vật lý ×1.1 (né riêng từng đòn). Tốn 18 Thể lực, hồi chiêu 2 lượt." },
+    sk_bandage: { name: "Băng bó chú lực", cost: { ce: 20 }, cd: 3, effect: { heal: 0.15 }, desc: "Hồi 15% HP tối đa. Tốn 20 Chú lực, hồi chiêu 3 lượt." },
+    sk_shot: { name: "Phóng chú lực", cost: { ce: 15 }, cd: 1, effect: { dmg: { src: "cpow", mult: 1.5 } }, desc: "Bắn chú lực từ xa: Uy lực ×1.5. Tốn 15 Chú lực, hồi chiêu 1 lượt." },
+    sk_focus: { name: "Tập trung", cost: { ce: 10 }, cd: 3, effect: { focus: { mult: 1.5 } }, desc: "Đòn tấn công kế tiếp mạnh ×1.5. Tốn 10 Chú lực, hồi chiêu 3 lượt." },
+    sk_simple: { name: "Giản dị lãnh địa", cost: { ce: 30 }, cd: 4, effect: { guardPct: 0.7 }, desc: "Dựng một vòng lãnh địa nhỏ quanh người: giảm 70% sát thương nhận vào trong lượt này. Tốn 30 Chú lực, hồi chiêu 4 lượt." },
+    sk_pierce: { name: "Đòn xuyên giáp", cost: { sta: 20 }, cd: 2, effect: { dmg: { src: "patk", mult: 1.8 }, pierce: 0.5 }, desc: "Tấn công vật lý ×1.8, bỏ qua 50% Giáp của mục tiêu. Tốn 20 Thể lực, hồi chiêu 2 lượt." },
+    sk_burst: { name: "Bùng nổ chú lực", cost: { ce: 45 }, cd: 4, effect: { dmg: { src: "hybrid", mult: 3.6 } }, desc: "(Tấn công + 0.5×Uy lực) ×3.6. Tốn 45 Chú lực, hồi chiêu 4 lượt." },
+    sk_eye: { name: "Nhãn lực Hệ thống", cost: { ce: 15 }, cd: 4, effect: { focus: { mult: 1, crit: true, sure: true } }, desc: "Hệ thống tính trước chuyển động của mục tiêu: đòn tấn công kế tiếp chắc chắn chí mạng và không thể né. Tốn 15 Chú lực, hồi chiêu 4 lượt." },
+    sk_regen: { name: "Tái tạo Hệ thống", cost: {}, cd: 5, effect: { heal: 0.25, restore: 30 }, desc: "Hồi 25% HP tối đa và 30 Chú lực. Không tốn tài nguyên, hồi chiêu 5 lượt." },
+  });
   const TECH3 = { khacan: "tk_anlien", phananh: "tk_kinhtran", trongap: "tk_truongluc", lientuyen: "tk_luoi", thucchu: "tk_dongHoa", tichquang: "tk_lienphat" };
 
   /* ---------- VẬT PHẨM MỚI ---------- */
@@ -78,13 +90,13 @@
     c_cap2_trial: { name: "Chú linh cấp 2 — Sát hạch", rank: "C", lv: 21, stats: st(26, 24, 26, 15, 15, 5), exp: 7000, devour: "INT", skills: [{ name: "Trăm cánh tay", mult: 1.7, src: "patk", cd: 3 }, { name: "Tiếng than", mult: 1.6, src: "cpow", cd: 3 }, { name: "Bóp", mult: 1.2, src: "patk" }], desc: "Chú linh cấp 2 thu giữ ở kho phong ấn của học viện." },
     nagi: mk("Yoshino Nagi", "E", 2, [3, 3, 3, 3, 3, 3], { desc: "Mẹ của Junpei. Hút thuốc, cười to, nấu cà ri rất ngon." }),
   });
-  /* Cân bằng: kẻ địch Arc 2–3 có tổng chỉ số ≈ 1.15–1.25 × mức chuẩn theo Level (người chơi có đặc tính, trang bị, luyện tập) */
+  /* Cân bằng: kẻ địch Arc 2–3 có tổng chỉ số ≈ 1.25–1.35 × mức chuẩn theo Level (người chơi có đặc tính, trang bị, luyện tập) */
   const scale = (id, factor, hpMult) => {
     const n = D.NPCS[id], target = Math.round((30 + 5 * (n.lv - 1)) * factor), sum = Object.values(n.stats).reduce((a, b) => a + b, 0);
     for (const k in n.stats) n.stats[k] = Math.max(1, Math.round((n.stats[k] * target) / sum));
     if (hpMult) n.hpMult = hpMult;
   };
-  [["c_school", 1.15], ["c_kaihen", 1.15], ["c_kaihen2", 1.15, 1.1], ["c_kaihen_big", 1.2, 1.3], ["c_pool", 1.2, 1.1], ["c_tunnel", 1.2, 1.2], ["c_hoa", 1.2, 1.2], ["c_cap2_trial", 1.25, 1.35], ["miwa", 1.1, 1.5]]
+  [["c_school", 1.25], ["c_kaihen", 1.25], ["c_kaihen2", 1.25, 1.1], ["c_kaihen_big", 1.3, 1.3], ["c_pool", 1.3, 1.1], ["c_tunnel", 1.3, 1.2], ["c_hoa", 1.3, 1.2], ["c_cap2_trial", 1.35, 1.35], ["miwa", 1.2, 1.5]]
     .forEach(([id, f, h]) => scale(id, f, h));
   Object.assign(D.NPCS.miwa, { exp: 3500, skills: [{ name: "Tân Âm Lưu: Rút kiếm", mult: 1.9, src: "patk", cd: 3 }, { name: "Chém", mult: 1.2, src: "patk" }] });
   // Học sinh năm hai (Arc 3) dùng cùng mức sức mạnh đã khai báo trong data.js
@@ -169,7 +181,7 @@
   /* ---------- KHU TỰ DO ---------- */
   const academy = (npcs, events, extra) => Object.assign({ name: "Sân học viện", env: "temple", npcs, events: events || [], idle: "Gió thổi qua những mái chùa cũ. Học viện yên tĩnh lạ thường." }, extra);
   const HUBS = {
-    a1_hub1: { name: "Tuần đầu ở học viện", days: 3, trainCap: 3, start: "san",
+    a1_hub1: { name: "Tuần đầu ở học viện", days: 3, trainCap: 4, start: "san",
       intro: "Gojo đi công tác, bảo cả nhóm \"tự làm quen với trường\". Ba ngày tự do trước khi người thứ tư tới.",
       locations: {
         san: academy([["itadori", "fushiguro"], ["itadori"], ["itadori"]], [
@@ -185,7 +197,7 @@
           { id: "a1_shrine", text: ["Shen ghé một ngôi đền nhỏ, bỏ năm yên vào hòm công đức.", "Ông từ già nhìn cậu rồi bảo: \"Cậu mang nhiều thứ trên vai quá.\""], eff: { exp: 150, trace: { phongan: 1 } } },
         ] },
       } },
-    a1_hub2: { name: "Sau nhiệm vụ Roppongi", days: 5, trainCap: 4, start: "san",
+    a1_hub2: { name: "Sau nhiệm vụ Roppongi", days: 5, trainCap: 6, start: "san",
       intro: "Nhiệm vụ đầu tiên đã xong. Học viện cho năm nhất một tuần để hồi phục, luyện tập và nhận việc vặt.",
       locations: {
         san: academy([["itadori", "fushiguro", "kugisaki"], ["itadori", "kugisaki"], ["itadori"]], [
@@ -201,7 +213,7 @@
           { id: "a1_hosp", slot: [2], title: "Hành lang bệnh viện", text: ["Nửa đêm. Tiếng trẻ con khóc vọng ra từ cuối hành lang, rồi một bóng người bò bằng bốn chi lao về phía Shen."], combat: ["c_hosp"], eff: { yen: 30000, rep: { danthuong: 3 } } },
         ] },
       } },
-    a2_hub1: { name: "Điều tra ở Kawasaki", days: 4, trainCap: 3, start: "kawasaki",
+    a2_hub1: { name: "Điều tra ở Kawasaki", days: 4, trainCap: 5, start: "kawasaki",
       intro: "Nanami chia việc: ban ngày mỗi người tự điều tra, tối tập trung báo cáo. \"Tôi không làm thêm giờ. Các cậu cũng vậy.\"",
       locations: {
         kawasaki: { name: "Trung tâm Kawasaki", env: "city", npcs: [["nanami"], ["junpei", "itadori"], ["nanami"]], idle: "Rạp chiếu phim đã dán băng niêm phong. Người qua đường vẫn xếp hàng mua bỏng ngô ở rạp bên cạnh.", events: [
@@ -217,7 +229,7 @@
         ] },
         hocvien: { name: "Học viện (về báo cáo)", env: "temple", npcs: [["fushiguro", "kugisaki"], ["ieiri"], []], idle: "Học viện vắng vẻ khi thiếu Itadori.", events: [] },
       } },
-    a2_hub2: { name: "Hai ngày trước cơn bão", days: 2, trainCap: 2, start: "kawasaki",
+    a2_hub2: { name: "Hai ngày trước cơn bão", days: 2, trainCap: 3, start: "kawasaki",
       intro: "Nanami cần hai ngày để hồi phục. Mahito đang ở đâu đó trong thành phố.",
       locations: {
         kawasaki: { name: "Trung tâm Kawasaki", env: "city", npcs: [["nanami"], ["junpei"], ["itadori"]], idle: "Trời âm u cả ngày.", events: [] },
@@ -226,7 +238,7 @@
         ] },
         satozakura: { name: "Trường cấp ba Satozakura", env: "school", npcs: [], idle: "Ngày mai trường tổ chức lễ chào cờ toàn trường.", events: [] },
       } },
-    a3_hub1: { name: "Một tháng trước Giao lưu", days: 7, trainCap: 6, start: "san",
+    a3_hub1: { name: "Một tháng trước Giao lưu", days: 7, trainCap: 9, start: "san",
       intro: "Còn một tháng nữa là Giao lưu Kyoto. Đàn anh đàn chị năm hai nhận lời luyện cho năm nhất. Học viện cũng phát thêm nhiệm vụ để kiếm kinh nghiệm thực chiến.",
       locations: {
         san: academy([["maki", "panda", "fushiguro"], ["maki", "panda", "inumaki", "kugisaki"], ["inumaki", "panda"]], [
@@ -245,7 +257,7 @@
           { id: "a3_tunnel", req: { level: 15 }, title: "Đường hầm phong tỏa", text: ["Hai luồng đèn pha lao tới từ cuối đường hầm. Không có đoàn tàu nào chạy tuyến này từ mười năm trước."], combat: ["c_tunnel"], eff: { yen: 60000, rep: { tokyo: 4 } } },
         ] },
       } },
-    a3_hub2: { name: "Sau Giao lưu", days: 3, trainCap: 3, start: "san",
+    a3_hub2: { name: "Sau Giao lưu", days: 3, trainCap: 4, start: "san",
       intro: "Giao lưu kết thúc trong hỗn loạn. Trước khi tham gia sát hạch Cấp 2, Shen có ba ngày.",
       locations: {
         san: academy([["itadori", "fushiguro", "kugisaki"], ["maki", "panda", "inumaki"], ["itadori"]]),
@@ -261,7 +273,6 @@
       items: [
         { id: "dan_he", price: 30, stock: 5 }, { id: "tinh_STR", price: 60, stock: 2 }, { id: "tinh_AGI", price: 60, stock: 2 }, { id: "tinh_VIT", price: 60, stock: 2 },
         { id: "tinh_INT", price: 60, stock: 2 }, { id: "tinh_WIS", price: 60, stock: 2 }, { id: "manh_tiem", price: 150, stock: 1 },
-        { id: "sach_step", price: 80, stock: 1 }, { id: "sach_block", price: 100, stock: 1, req: { level: 6 } },
         { id: "kiem_chu3", price: 150, stock: 1 }, { id: "gang_khac", price: 110, stock: 1 }, { id: "ao_bua", price: 120, stock: 1 },
       ] },
     academy: { name: "Kho hậu cần Học viện", currency: "yen", hubOnly: true, desc: "Chỉ mở trong thời gian tự do. Thanh toán bằng yên.",
@@ -304,5 +315,23 @@
     q_trialC: { name: "Sát hạch Cấp 2", desc: "Một mình trừ khử chú linh cấp 2." },
   });
 
-  Object.assign(D, { SOCIAL, HUBS, SHOPS, RANK_REWARDS, TECH3 });
+  /* ---------- DANH MỤC KỸ NĂNG (học trực tiếp) ----------
+     cur: "yen" = Học viện dạy, chỉ học trong thời gian tự do · "sp" = Hệ thống truyền thẳng, học mọi lúc ngoài trận */
+  const SKILL_SHOP = [
+    { id: "sk_kick", cur: "yen", price: 8000, req: { STR: 8 }, by: "Hiệu trưởng Yaga" },
+    { id: "sk_step", cur: "yen", price: 15000, req: { AGI: 9 }, by: "Maki (bài tập bộ pháp)" },
+    { id: "sk_bandage", cur: "yen", price: 10000, req: { WIS: 8 }, by: "Bác sĩ Ieiri" },
+    { id: "sk_shot", cur: "yen", price: 15000, req: { INT: 10 }, by: "Giáo trình Học viện" },
+    { id: "sk_combo", cur: "yen", price: 12000, req: { AGI: 10 }, by: "Giáo trình Học viện" },
+    { id: "sk_block", cur: "yen", price: 20000, req: { level: 6 }, by: "Giáo trình Học viện" },
+    { id: "sk_focus", cur: "yen", price: 18000, req: { WIS: 12 }, by: "Nanami Kento" },
+    { id: "sk_simple", cur: "yen", price: 60000, req: { rank: "C", level: 18 }, by: "Bí truyền Học viện" },
+    { id: "sk_heavy", cur: "sp", price: 60, req: { STR: 15 }, by: "Hệ thống" },
+    { id: "sk_pierce", cur: "sp", price: 80, req: { level: 8 }, by: "Hệ thống" },
+    { id: "sk_eye", cur: "sp", price: 100, req: { WIS: 15 }, by: "Hệ thống" },
+    { id: "sk_burst", cur: "sp", price: 150, req: { level: 12, rank: "D" }, by: "Hệ thống" },
+    { id: "sk_regen", cur: "sp", price: 200, req: { level: 15 }, by: "Hệ thống" },
+  ];
+
+  Object.assign(D, { SOCIAL, HUBS, SHOPS, RANK_REWARDS, TECH3, SKILL_SHOP });
 })(typeof window !== "undefined" ? window : globalThis);
