@@ -74,6 +74,10 @@
     tk_can: { tech: true, name: "Cắn Chú", cost: { ce: 15 }, cd: 1, effect: { dmg: { src: "cpow", mult: 1.3 }, drain: 0.5 }, desc: "Uy lực ×1.3, hút lại 50% sát thương thành Chú lực. Tốn 15 Chú lực, hồi chiêu 1 lượt." },
     tk_ham: { tech: true, name: "Hàm Chú", cost: { ce: 30 }, cd: 3, effect: { dmg: { src: "cpow", mult: 2.0 } }, desc: "Uy lực ×2.0. Tốn 30 Chú lực, hồi chiêu 3 lượt." },
     tk_loa: { tech: true, name: "Lóa Sáng", cost: { ce: 12 }, cd: 3, effect: { blind: 0.3 }, desc: "Giảm 30% khả năng đánh trúng của mục tiêu trong 2 lượt. Tốn 12 Chú lực, hồi chiêu 3 lượt." },
+    tk_song: { tech: true, name: "Sóng Chấn", cost: { ce: 15 }, cd: 1, effect: { dmg: { src: "cpow", mult: 1.4 }, stun: 0.25 }, desc: "Uy lực ×1.4, 25% làm mục tiêu choáng mất lượt. Tốn 15 Chú lực, hồi chiêu 1 lượt." },
+    tk_conghuong: { tech: true, name: "Cộng Hưởng", cost: { ce: 24 }, cd: 2, effect: { dmg: { src: "cpow", mult: 1.0 }, hits: 3 }, desc: "Ba đợt sóng liên tiếp, mỗi đợt Uy lực ×1.0. Tốn 24 Chú lực, hồi chiêu 2 lượt." },
+    tk_cham: { tech: true, name: "Khoảnh Khắc Chậm", cost: { ce: 14 }, cd: 3, effect: { blind: 0.35, focus: { mult: 1.3 } }, desc: "Giảm 35% khả năng đánh trúng của mục tiêu 2 lượt, đòn tấn công kế tiếp ×1.3. Tốn 14 Chú lực, hồi chiêu 3 lượt." },
+    tk_cat: { tech: true, name: "Cắt Khoảnh Khắc", cost: { ce: 20 }, cd: 1, effect: { dmg: { src: "cpow", mult: 1.7 }, sure: true }, desc: "Uy lực ×1.7, không thể né. Tốn 20 Chú lực, hồi chiêu 1 lượt." },
     tk_tien: { tech: true, name: "Quang Tiễn", cost: { ce: 18 }, cd: 1, effect: { dmg: { src: "cpow", mult: 1.6 } }, desc: "Uy lực ×1.6. Tốn 18 Chú lực, hồi chiêu 1 lượt." },
   };
 
@@ -104,6 +108,28 @@
       tier1: { skills: ["tk_loa", "tk_tien"], passive: "Chú linh cấp thấp né kém hơn trước ánh sáng." },
       tree: ["B1 Tịch Quang", "B2 Quang Tiễn Liên Phát | Quang Thuẫn", "B3 Bạch Dạ", "B4 Nhật Thực Giới"], hidden: "Hắc Quang" },
   };
+
+  Object.assign(TECHNIQUES, {
+    amchan: { name: "Âm Chấn Thuật", weights: { amchan: 3, lienket: 1, xungkich: 1 },
+      desc: "Biến chú lực thành sóng âm: rung chấn, làm choáng và cộng hưởng nhiều lần trên một mục tiêu. Mạnh khi đánh liên tục, yếu trước kẻ có lớp bảo vệ dày.",
+      tier1: { skills: ["tk_song", "tk_conghuong"], passive: "Đòn sóng âm có thể làm mục tiêu choáng." },
+      tree: ["B1 Âm Chấn", "B2 Cộng Hưởng | Tĩnh Âm", "B3 Vạn Lôi Hồi Âm", "B4 Thiên Cổ"], hidden: "Thiên Lôi Cổ" },
+    thoikhac: { name: "Thời Khắc Thuật", weights: { thoikhac: 3, quansat: 2 },
+      desc: "Cắt lát khoảnh khắc: làm chậm nhận thức của đối thủ trong chớp mắt và ra đòn vào đúng nhịp hở. Chính xác, nhưng tiêu hao tinh thần rất lớn.",
+      tier1: { skills: ["tk_cham", "tk_cat"], passive: "Đòn Cắt Khoảnh Khắc không thể bị né." },
+      tree: ["B1 Thời Khắc", "B2 Khoảnh Khắc Chậm | Lặp Nhịp", "B3 Ngưng Đọng", "B4 Đồng Hồ Thế Gian"], hidden: "Thời Gian Nghịch Lưu" },
+  });
+  const HIDDEN_HINT = {
+    khacan: "Liên quan tới máu và một lời thề không thể rút lại.",
+    phananh: "Một chiếc gương chỉ phản chiếu sự thật khi chủ nhân chấp nhận mất đi một thứ.",
+    trongap: "Thứ nặng nhất không phải là vật chất.",
+    lientuyen: "Sợi chỉ nối hai linh hồn lại với nhau.",
+    thucchu: "Đã nuốt đủ trăm loại chú linh khác nhau.",
+    tichquang: "Ánh sáng sinh ra từ chính bóng tối sâu nhất.",
+    amchan: "Tiếng sấm vang lên từ một trái tim đã ngừng đập.",
+    thoikhac: "Một khoảnh khắc mà Ký chủ muốn quay lại hơn bất cứ điều gì.",
+  };
+  for (const k in HIDDEN_HINT) TECHNIQUES[k].hiddenHint = HIDDEN_HINT[k];
 
   /* ---------- VẬT PHẨM (phẩm chất ≠ Rank — mục 9.2) ---------- */
   const ITEMS = {
@@ -209,27 +235,53 @@
     { q: "Lúc con mắt trong tủ nhìn nhóc, nhóc nghĩ gì đầu tiên?", a: [
       { t: "\"Phải nhìn rõ nó là thứ gì đã.\"", trace: { quansat: 2 } },
       { t: "\"Đấm nó trước khi nó kịp làm gì.\"", trace: { xungkich: 2 } },
-      { t: "\"Còn ai khác trong trường không?\"", trace: { baove: 2 } }] },
+      { t: "\"Còn ai khác trong trường không?\"", trace: { baove: 2 } },
+      { t: "\"Nó đang run. Nó cũng sợ mình.\"", trace: { amchan: 2, lienket: 1 } }] },
     { q: "Nếu có một thứ nhóc muốn giữ mãi không mất, đó là gì?", a: [
       { t: "Những người ở cạnh mình.", trace: { lienket: 2, baove: 1 }, moral: 3 },
       { t: "Lời hứa mình đã nói ra.", trace: { phongan: 2 }, moral: 2 },
-      { t: "Sức mạnh để không ai đè đầu mình nữa.", trace: { haptu: 2, xungkich: 1 }, anti: 3 }] },
+      { t: "Sức mạnh để không ai đè đầu mình nữa.", trace: { haptu: 2, xungkich: 1 }, anti: 3 },
+      { t: "Khoảnh khắc trước khi mọi thứ đổ vỡ.", trace: { thoikhac: 2, quansat: 1 } }] },
     { q: "Chỗ tối nhất nhóc từng ở là đâu?", a: [
       { t: "Căn phòng mất điện hồi nhỏ. Mình ghét bóng tối từ đó.", trace: { anhsang: 2 } },
       { t: "Bên trong đầu mình, lúc mọi thứ rối tung.", trace: { quansat: 1, phongan: 1 } },
-      { t: "Không nhớ. Mình không để ý mấy chuyện đó.", trace: { xungkich: 1, haptu: 1 } }] },
+      { t: "Không nhớ. Mình không để ý mấy chuyện đó.", trace: { xungkich: 1, haptu: 1 } },
+      { t: "Một căn nhà im lặng tới mức nghe được tiếng tim mình.", trace: { amchan: 2 } }] },
     { q: "Bị dồn vào góc tường, nhóc làm gì?", a: [
       { t: "Chịu đòn, đợi nó lộ sơ hở rồi trả lại gấp đôi.", trace: { baove: 2, quansat: 1 } },
       { t: "Lao thẳng vào. Góc tường thì cũng là chỗ đứng vững nhất.", trace: { xungkich: 2 } },
-      { t: "Tìm thứ gì quanh đó để dùng: dây, ánh đèn, bất cứ gì.", trace: { lienket: 1, anhsang: 1 } }] },
+      { t: "Tìm thứ gì quanh đó để dùng: dây, ánh đèn, bất cứ gì.", trace: { lienket: 1, anhsang: 1 } },
+      { t: "Đếm nhịp đòn của nó. Ai cũng có một khoảnh khắc chậm lại.", trace: { thoikhac: 2, quansat: 1 } }] },
     { q: "Chú linh sinh ra từ cảm xúc tiêu cực của con người. Nhóc nghĩ sao về chúng?", a: [
       { t: "Chúng là thứ phải bị trừ tận gốc.", trace: { xungkich: 1 }, moral: 2 },
       { t: "Chúng là năng lượng. Năng lượng thì dùng được.", trace: { haptu: 3 }, anti: 4 },
-      { t: "Chúng là thứ cần bị niêm phong lại, như cái tủ đó.", trace: { phongan: 3 } }] },
-    { q: "Câu cuối. Nếu một ngày nhóc mạnh nhất thế giới, nhóc sẽ làm gì?", a: [
+      { t: "Chúng là thứ cần bị niêm phong lại, như cái tủ đó.", trace: { phongan: 3 } },
+      { t: "Chúng là tiếng vọng của con người. Nghe kỹ sẽ hiểu được.", trace: { amchan: 2, quansat: 1 } }] },
+    { q: "Câu thứ sáu. Nếu một ngày nhóc mạnh nhất thế giới, nhóc sẽ làm gì?", a: [
       { t: "Bảo vệ để không ai phải chết vô ích.", trace: { baove: 2, lienket: 1 }, moral: 4 },
       { t: "Thay đổi cái thế giới chú thuật mục nát này, bằng mọi giá.", trace: { xungkich: 1, haptu: 1 }, anti: 6 },
-      { t: "Chưa biết. Có lẽ là tìm hiểu tại sao mình lại có Hệ thống.", trace: { quansat: 2, anhsang: 1 } }] },
+      { t: "Chưa biết. Có lẽ là tìm hiểu tại sao mình lại có Hệ thống.", trace: { quansat: 2, anhsang: 1 } },
+      { t: "Quay ngược lại những ngày đã mất. Nếu có thể.", trace: { thoikhac: 3 } }] },
+    { q: "Lúc Itadori ngã xuống ở trại giam, nhóc đã cảm thấy gì?", a: [
+      { t: "Giận. Giận chính mình vì quá yếu.", trace: { xungkich: 2, haptu: 1 } },
+      { t: "Lạnh. Như thời gian đứng im.", trace: { thoikhac: 2 } },
+      { t: "Muốn níu cậu ấy lại, bằng bất cứ sợi dây nào.", trace: { lienket: 3 }, moral: 1 },
+      { t: "Muốn khóa chặt khoảnh khắc đó lại, để nó không lặp lại với ai khác.", trace: { phongan: 2, baove: 1 } }] },
+    { q: "Một chú linh và một con người cùng cầu cứu. Nhóc chỉ cứu được một bên.", a: [
+      { t: "Con người. Không cần nghĩ.", trace: { baove: 2 }, moral: 2 },
+      { t: "Bên nào có ích hơn cho mình.", trace: { haptu: 2 }, anti: 4 },
+      { t: "Tìm cách cứu cả hai, dù có thể mất cả hai.", trace: { lienket: 2, anhsang: 1 }, moral: 1 },
+      { t: "Dừng lại một giây để nhìn. Có khi cả hai đều đang nói dối.", trace: { quansat: 2, thoikhac: 1 } }] },
+    { q: "Âm thanh nào khiến nhóc thấy yên lòng nhất?", a: [
+      { t: "Tiếng mưa trên mái nhà.", trace: { amchan: 2 } },
+      { t: "Tiếng bạn bè cãi nhau vì chuyện vớ vẩn.", trace: { lienket: 2 } },
+      { t: "Tiếng tích tắc của đồng hồ.", trace: { thoikhac: 2 } },
+      { t: "Không có. Mình thích im lặng tuyệt đối.", trace: { phongan: 1, anhsang: 1 } }] },
+    { q: "Câu cuối. Nhóc muốn người khác nhớ về mình như thế nào?", a: [
+      { t: "Người đã đứng chắn trước họ.", trace: { baove: 2 }, moral: 3 },
+      { t: "Người đã thắp sáng chỗ tối.", trace: { anhsang: 2 }, moral: 1 },
+      { t: "Người không ai đoán trước được.", trace: { haptu: 1, thoikhac: 1 }, anti: 2 },
+      { t: "Không cần ai nhớ. Miễn mọi thứ được giữ đúng chỗ của nó.", trace: { phongan: 2, quansat: 1 } }] },
   ];
 
   const QUESTS = {

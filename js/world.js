@@ -36,7 +36,11 @@
     sk_eye: { name: "Nhãn lực Hệ thống", cost: { ce: 15 }, cd: 4, effect: { focus: { mult: 1, crit: true, sure: true } }, desc: "Hệ thống tính trước chuyển động của mục tiêu: đòn tấn công kế tiếp chắc chắn chí mạng và không thể né. Tốn 15 Chú lực, hồi chiêu 4 lượt." },
     sk_regen: { name: "Tái tạo Hệ thống", cost: {}, cd: 5, effect: { heal: 0.25, restore: 30 }, desc: "Hồi 25% HP tối đa và 30 Chú lực. Không tốn tài nguyên, hồi chiêu 5 lượt." },
   });
-  const TECH3 = { khacan: "tk_anlien", phananh: "tk_kinhtran", trongap: "tk_truongluc", lientuyen: "tk_luoi", thucchu: "tk_dongHoa", tichquang: "tk_lienphat" };
+  Object.assign(D.SKILLS, {
+    tk_vanloi: { tech: true, name: "Vạn Lôi Hồi Âm", cost: { ce: 30 }, cd: 3, effect: { dmg: { src: "cpow", mult: 2.2 }, stun: 0.4 }, desc: "Uy lực ×2.2, 40% làm mục tiêu choáng. Tốn 30 Chú lực, hồi chiêu 3 lượt." },
+    tk_ngung: { tech: true, name: "Ngưng Đọng", cost: { ce: 28 }, cd: 4, effect: { dmg: { src: "cpow", mult: 0.8 }, stun: 0.9 }, desc: "Uy lực ×0.8, 90% đóng băng mục tiêu mất lượt kế tiếp. Tốn 28 Chú lực, hồi chiêu 4 lượt." },
+  });
+  const TECH3 = { khacan: "tk_anlien", phananh: "tk_kinhtran", trongap: "tk_truongluc", lientuyen: "tk_luoi", thucchu: "tk_dongHoa", tichquang: "tk_lienphat", amchan: "tk_vanloi", thoikhac: "tk_ngung" };
 
   /* ---------- VẬT PHẨM MỚI ---------- */
   Object.assign(D.ITEMS, {

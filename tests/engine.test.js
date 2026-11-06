@@ -1,7 +1,7 @@
 /* Chạy: node tests/engine.test.js  — unit test công thức + chơi thử tự động toàn bộ Arc 1 */
-require("../js/data.js"); require("../js/world.js"); require("../js/story.js"); require("../js/story2.js"); require("../js/engine.js");
+require("../js/data.js"); require("../js/world.js"); require("../js/gear.js"); require("../js/story.js"); require("../js/story2.js"); require("../js/engine.js");
 const CD = globalThis.CD;
-let pass = 0, fail = 0;
+let pass = 0, fail = 0, D2;
 const eq = (name, a, b) => { if (JSON.stringify(a) === JSON.stringify(b)) pass++; else { fail++; console.log("FAIL", name, "→", a, "≠", b); } };
 const ok = (name, c) => eq(name, !!c, true);
 
@@ -91,7 +91,26 @@ Object.entries(S).forEach(([id, sc]) => {
   s.cur.hp = 50; c.cds = {}; CD.combat.playerAct(s, c, { type: "skill", id: "sk_bandage" }, r0); ok("Băng bó hồi HP", c.log.some((l) => /hồi \d+ HP/.test(l)));
 }
 { const s = CD.newCampaign(); s.level = 8; s.flags.push("trial_D"); CD.tryRankScene(s); eq("chờ chọn thưởng", s.pendingRank, "D");
-  eq("3 lựa chọn", CD.rankChoices(s).length, 3); const before = s.base.INT; CD.claimRank(s, 1); eq("thưởng Tâm pháp", s.base.INT, before + 2); eq("hết chờ", s.pendingRank, null); }
+  eq("4 lựa chọn", CD.rankChoices(s).length, 4); const before = s.base.INT; CD.claimRank(s, 1); eq("thưởng Tâm pháp", s.base.INT, before + 2); eq("hết chờ", s.pendingRank, null); }
+
+/* ---- Trang bị Bậc × Phẩm ---- */
+{ const g = CD.makeGear({ name: "x", slot: "Vũ khí", rank: "C", quality: "Sử thi", affixes: [0] });
+  eq("ngân sách C × Sử thi = round(8 × 1.75)", Object.values(g.stats).reduce((a, b) => a + b, 0), 14);
+  eq("thuộc tính phụ chí mạng", g.mods.critBonus, 0.03); eq("cần Rank C", g.req.rank, "C");
+  const s = CD.newCampaign(); D2 = CD.DATA; D2.ITEMS.__t = g; s.inventory.push({ id: "__t", qty: 1 });
+  eq("không mặc vượt Bậc", CD.canEquip(s, g), false); s.rank = "C"; CD.equip(s, "__t");
+  eq("thuộc tính phụ cộng vào hệ số", CD.mods(s).critBonus, 0.03);
+  let drops = 0; for (let i = 0; i < 200; i++) if (CD.rollLoot(s, "D", Math.random, true)) drops++; eq("trùm luôn rơi đồ", drops, 200);
+  const id = Object.keys(s.genItems)[0]; s.inventory.push({ id, qty: 1 }); const y = s.currency.yen; CD.sellItem(s, id); ok("phân giải ra yên", s.currency.yen > y);
+  ok("lưu/nhập giữ đồ sinh ngẫu nhiên", CD.importSave(CD.exportSave(s)).ok);
+  s.rank = "D"; s.level = 50; s.currency.sp = 5000; eq("kỹ năng Bậc B bị chặn ở Rank D", CD.learnSkill(s, "sk_rct").ok, false); }
+{ const s = CD.newCampaign(); CD.answerInterview(s, 0, 1); CD.answerInterview(s, 1, 2); const t1 = JSON.stringify(s.traces), a1 = s.anti;
+  ok("làm lại khảo sát", CD.redoSurvey(s)); eq("dấu vết trở về 0", Object.values(s.traces).every((v) => v === 0), true); eq("anti trả lại", s.anti, 0);
+  eq("chỉ làm lại 1 lần", CD.redoSurvey(s), false); eq("khảo sát 10 câu", CD.DATA.INTERVIEW.length, 10);
+  ok("mỗi câu 4 lựa chọn", CD.DATA.INTERVIEW.every((q) => q.a.length === 4)); eq("đề xuất 4 thuật thức", CD.suggestTechniques(s, 4).length, 4);
+  ok("thuật thức nào cũng có nhánh ẩn", Object.values(CD.DATA.TECHNIQUES).every((t) => t.hidden && t.hiddenHint)); }
+ok("mọi Rank D→SSS có thưởng", ["D", "C", "B", "A", "S", "SS", "SSS"].every((r) => CD.DATA.RANK_REWARDS[r]));
+ok("mọi kỹ năng có Bậc", Object.values(CD.DATA.SKILLS).every((k) => CD.RANKS.includes(k.rank)));
 
 /* ---- Chơi thử tự động qua 3 arc ---- */
 function rngFrom(seed) { let x = seed >>> 0 || 1; return () => ((x ^= x << 13), (x ^= x >>> 17), (x ^= x << 5), (x >>> 0) / 4294967296); }
@@ -124,7 +143,7 @@ function playthrough(seed, prefer) {
     if (s.pendingRank) CD.claimRank(s, seed % 3);
     if (sc.special === "traits") { const keys = Object.keys(CD.DATA.TRAITS); const a = keys[seed % 20], b = keys[(seed * 7 + 3) % 20 === seed % 20 ? (seed + 1) % 20 : (seed * 7 + 3) % 20]; CD.pickTraits(s, [a, b]); id = sc.go; }
     else if (sc.special === "interview") { CD.DATA.INTERVIEW.forEach((q, i) => CD.answerInterview(s, i, Math.floor(rng() * q.a.length))); id = sc.go; }
-    else if (sc.special === "technique") { const opts = CD.suggestTechniques(s, 3); CD.setTechnique(s, opts[0]); id = sc.go; }
+    else if (sc.special === "technique") { const opts = CD.suggestTechniques(s, 4); if (seed % 5 === 0 && CD.redoSurvey(s)) { CD.DATA.INTERVIEW.forEach((q, i) => CD.answerInterview(s, i, (i + seed) % 4)); } CD.setTechnique(s, CD.suggestTechniques(s, 4)[seed % 4]); id = sc.go; }
     else if (sc.special === "restriction") { const keys = [null, "xacthit", "tamthan", "menhdoi"]; CD.setRestriction(s, keys[seed % 4]); id = sc.go; }
     else if (sc.special === "rankup") { CD.tryRankScene(s); if (s.pendingRank) CD.claimRank(s, seed % 3); id = sc.go; }
     else if (sc.hub) {
@@ -184,6 +203,8 @@ console.log("Lv cuối Arc 1:", stat((r) => r.log.lvA1), "· cuối Arc 2:", sta
 console.log("Rank D cuối Arc 1:", results.filter((r) => r.log.rankA1 === "D").length + "/120 · Rank C cuối Arc 3:", results.filter((r) => r.s.rank === "C").length + "/120");
 const losses = {}; results.forEach((r) => r.log.fights.filter((f) => f.includes(":lose")).forEach((f) => { const k = f.split(":lose")[0]; losses[k] = (losses[k] || 0) + 1; }));
 console.log("Số trận thua theo cảnh:", losses);
-console.log("Mẫu trận seed 2:", results[1].log.fights.join(" ").slice(0, 600)); console.log("Junpei sống:", results.filter((r) => r.s.flags.includes("junpei_alive")).length + "/120 · SP còn TB:", Math.round(results.reduce((a, r) => a + r.s.currency.sp, 0) / 120));
+console.log("Mẫu trận seed 2:", results[1].log.fights.join(" ").slice(0, 600)); const techs = {}; results.forEach((r) => (techs[r.s.technique] = (techs[r.s.technique] || 0) + 1)); console.log("Thuật thức:", techs);
+console.log("Đồ rơi TB:", Math.round(results.reduce((a, r) => a + Object.keys(r.s.genItems).length, 0) / 120));
+console.log("Junpei sống:", results.filter((r) => r.s.flags.includes("junpei_alive")).length + "/120 · SP còn TB:", Math.round(results.reduce((a, r) => a + r.s.currency.sp, 0) / 120));
 console.log(fail ? "❌ " + fail + " lỗi, " + pass + " đạt" : "✅ Tất cả " + pass + " kiểm tra đạt");
 process.exit(fail ? 1 : 0);

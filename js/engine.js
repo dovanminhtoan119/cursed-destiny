@@ -74,7 +74,7 @@
       milestonesHit: [],
       ledger: [], txDone: [], log: [],
       known: [],
-      hub: null, hubFight: null, shopBought: {}, pendingRank: null, rankHistory: [], skillLv: {},
+      hub: null, hubFight: null, shopBought: {}, pendingRank: null, rankHistory: [], skillLv: {}, genItems: {}, ivTraces: {}, ivEff: { moral: 0, anti: 0 },
     };
     CD.recalc(s, true);
     return s;
@@ -121,6 +121,7 @@
     });
     (s.traits || []).forEach((id) => apply(D().TRAITS[id]));
     if (s.restriction) apply(D().RESTRICTIONS[s.restriction]);
+    for (const slot in s.equipment || {}) apply(D().ITEMS[s.equipment[slot]]); // thuộc tính phụ của trang bị
     return m;
   };
 
@@ -217,9 +218,10 @@
   };
 
   /* ---------- VẬT PHẨM & TRANG BỊ ---------- */
-  CD.itemScore = (it) => Object.values(it.stats || {}).reduce((a, b) => a + b, 0);
+  CD.itemScore = (it) => Object.values(it.stats || {}).reduce((a, b) => a + b, 0) + Object.keys(it.mods || {}).length * 2;
   CD.canEquip = function (s, it) {
     if (!it.slot) return false;
+    if (it.rank && CD.rankIndex(s.rank) < CD.rankIndex(it.rank)) return false; // không mặc trang bị vượt Bậc
     if (it.req) {
       if (it.req.level && s.level < it.req.level) return false;
       if (it.req.rank && CD.rankIndex(s.rank) < CD.rankIndex(it.req.rank)) return false;
@@ -259,6 +261,15 @@
   CD.addItemRaw = function (s, id) {
     const ex = s.inventory.find((x) => x.id === id);
     if (ex && D().ITEMS[id].stack) ex.qty++; else s.inventory.push({ id, qty: 1 });
+  };
+  CD.sellItem = function (s, id) {
+    const it = D().ITEMS[id], slot = s.inventory.find((x) => x.id === id);
+    if (!it || !slot || it.unique || !it.slot) return null;
+    const v = Math.floor(CD.itemValue(it) * 0.4), b = s.currency.yen;
+    slot.qty--; if (slot.qty <= 0) s.inventory.splice(s.inventory.indexOf(slot), 1);
+    s.currency.yen += v;
+    if (it.gen && !s.inventory.some((x) => x.id === id) && !Object.values(s.equipment).includes(id)) delete s.genItems[id];
+    return "Phân giải " + it.name + ": yên " + b + " + " + v + " = " + s.currency.yen;
   };
   CD.useItem = function (s, id, inCombat) {
     const it = D().ITEMS[id], slot = s.inventory.find((x) => x.id === id);
@@ -332,7 +343,22 @@
   };
   CD.answerInterview = function (s, qi, ai) {
     const a = D().INTERVIEW[qi].a[ai];
+    if (s.txDone.includes("iv_" + qi)) return [];
+    s.ivTraces = s.ivTraces || {}; s.ivEff = s.ivEff || { moral: 0, anti: 0 };
+    for (const k in a.trace || {}) s.ivTraces[k] = (s.ivTraces[k] || 0) + a.trace[k];
+    s.ivEff.moral += a.moral || 0; s.ivEff.anti += a.anti || 0;
     return CD.applyEff(s, { trace: a.trace, moral: a.moral, anti: a.anti }, "iv_" + qi);
+  };
+  /* Làm lại khảo sát (1 lần, trước khi chọn thuật thức): gỡ toàn bộ dấu vết và điểm từ câu trả lời cũ */
+  CD.canRedoSurvey = (s) => !s.technique && !s.flags.includes("survey_redo");
+  CD.redoSurvey = function (s) {
+    if (!CD.canRedoSurvey(s)) return false;
+    for (const k in s.ivTraces || {}) s.traces[k] = (s.traces[k] || 0) - s.ivTraces[k];
+    s.moral -= (s.ivEff || {}).moral || 0; s.anti -= (s.ivEff || {}).anti || 0;
+    s.ivTraces = {}; s.ivEff = { moral: 0, anti: 0 };
+    s.txDone = s.txDone.filter((t) => !/^iv_\d+$/.test(t));
+    s.flags.push("survey_redo");
+    return true;
   };
   CD.setRestriction = function (s, id) {
     if (s.restriction || s.flags.includes("restriction_decided")) return false;
@@ -499,6 +525,7 @@
     if (e.cur === "yen" && !(s.hub && !CD.hubOver(s))) return { ok: false, msg: "Chỉ học được ở Học viện trong thời gian tự do." };
     if (e.req && !CD.meets(s, e.req)) return { ok: false, msg: "Chưa đủ điều kiện: " + CD.reqText(e.req) + "." };
     if (e.req && e.req.rank && CD.rankIndex(s.rank) < CD.rankIndex(e.req.rank)) return { ok: false, msg: "Cần Rank " + e.req.rank + "." };
+    const sr = D().SKILLS[id].rank; if (sr && CD.rankIndex(s.rank) < CD.rankIndex(sr)) return { ok: false, msg: "Kỹ năng Bậc " + sr + ": cần Rank " + sr + " trở lên." };
     if (s.currency[e.cur] < e.price) return { ok: false, msg: "Không đủ " + (e.cur === "sp" ? "Điểm Hệ thống" : "yên") + "." };
     return { ok: true };
   };
@@ -744,6 +771,15 @@
         const dead = c.enemies.filter((e) => e.dead);
         const total = dead.reduce((a, e) => a + e.exp, 0), sp = dead.reduce((a, e) => a + (CD.SP_BY_RANK[e.rank] || 0), 0);
         if (total || sp) msgs.push(...CD.applyEff(s, { exp: total, sp }, "combat_" + sceneId));
+        // Rơi đồ: mỗi kẻ địch một lần tung, trùm (HP nhân hệ số) chắc chắn rơi
+        if (CD.rollLoot && !s.txDone.includes("loot_" + sceneId)) {
+          s.txDone.push("loot_" + sceneId);
+          dead.forEach((e) => {
+            const boss = !!D().NPCS[e.id].hpMult || /Sát hạch|Thử thách/.test(e.name);
+            const id = CD.rollLoot(s, e.rank, Math.random, boss);
+            if (id) { const it = D().ITEMS[id]; msgs.push("Rơi đồ: " + it.name + " [Bậc " + it.rank + " · " + it.quality + "]"); msgs.push(...CD.addItem(s, id, 1).slice(1)); }
+          });
+        }
       }
       if (c.over === "lose") s.cur.hp = 1;
       CD.recalc(s);
@@ -774,6 +810,7 @@
     if (CD.hash(o.body) !== o.sum) return { ok: false, err: "Dữ liệu đã bị chỉnh sửa hoặc hỏng (sai mã kiểm tra)." };
     const s = JSON.parse(o.body);
     const fresh = CD.newCampaign(); for (const k in fresh) if (!(k in s)) s[k] = fresh[k]; // nâng cấp bản lưu cũ
+    if (CD.registerGen) CD.registerGen(s);
     const errs = CD.validate(s);
     return errs.length ? { ok: false, err: "Dữ liệu lỗi: " + errs.join("; ") } : { ok: true, s };
   };

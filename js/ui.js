@@ -53,10 +53,14 @@
   function skillDesc(id, withUp) {
     const k = D.SKILLS[id]; if (!k) return "";
     const known = S.skills.includes(id), lv = CD.skillLv(S, id), up = withUp && known ? CD.upgradeCost(S, id) : null;
-    return `<div class="skill"><div class="skill-h"><strong>${esc(k.name)}${known ? ` <em class="lv">Cấp ${lv}/${CD.SKILL_MAX}</em>` : ""}</strong><span>${costText(k)} · Hồi chiêu ${k.cd || 0}</span></div><div class="muted">${esc(k.desc)}${known && lv > 1 ? " Hiệu quả hiện tại ×" + CD.skillMult(S, id).toFixed(1) + "." : ""}</div>
+    return `<div class="skill"><div class="skill-h"><strong>${esc(k.name)} ${rChip(k.rank)}${known ? ` <em class="lv">Cấp ${lv}/${CD.SKILL_MAX}</em>` : ""}</strong><span>${costText(k)} · Hồi chiêu ${k.cd || 0}</span></div><div class="muted">${esc(k.desc)}${known && lv > 1 ? " Hiệu quả hiện tại ×" + CD.skillMult(S, id).toFixed(1) + "." : ""}</div>
       ${up ? `<div class="uprow"><span class="muted">Lên cấp ${lv + 1}: ${up.price.toLocaleString("vi-VN")} ${up.cur === "sp" ? "ĐHT" : "¥"} · cần Lv ${up.needLv} · +10% hiệu quả</span><button class="ghost sm" data-upgrade="${id}" ${S.level >= up.needLv && S.currency[up.cur] >= up.price ? "" : "disabled"}>Nâng cấp</button></div>` : withUp && known ? `<div class="uprow"><span class="muted">Đã đạt cấp tối đa.</span></div>` : ""}</div>`;
   }
   const SRC = { patk: "Vật lý", cpow: "Chú lực", hybrid: "Lai" };
+  const qIdx = (it) => Math.max(0, CD.QUALITIES.indexOf(it.quality));
+  const qChip = (it) => `<em class="q q${qIdx(it)}">${it.rank ? "Bậc " + it.rank + " · " : ""}${esc(it.quality || "")}${it.slot ? " · " + it.slot : ""}</em>`;
+  const itemInfo = (it) => [it.stats ? statLine(it.stats) : "", it.mods ? CD.affixText(it.mods) : ""].filter(Boolean).join(" · ");
+  const rChip = (r) => (r ? `<em class="sr r${CD.rankIndex(r)}">Bậc ${r}</em>` : "");
   function shortFx(sk) {
     const e = sk.effect || {}, p = [];
     if (e.dmg) p.push(SRC[e.dmg.src] + " ×" + e.dmg.mult);
@@ -121,12 +125,12 @@
     }
     if (sc.special === "technique") {
       if (S.technique) return contBtn(sc.go);
-      return `<div class="cards one">${CD.suggestTechniques(S, 3).map((id) => {
+      return `<div class="panel"><p class="muted">Hệ thống đề xuất 4 thuật thức dựa trên hành động và câu trả lời của Shen. ${CD.canRedoSurvey(S) ? "Nếu chưa ưng, bạn được làm lại khảo sát một lần." : "Đã dùng lượt làm lại khảo sát."}</p>${CD.canRedoSurvey(S) ? `<button class="ghost sm" data-redo>Làm lại khảo sát (còn 1 lần)</button>` : ""}</div><div class="cards one">${CD.suggestTechniques(S, 4).map((id) => {
         const t = D.TECHNIQUES[id];
         return `<div class="card big"><strong class="tname">${esc(t.name)}</strong><span>${esc(t.desc)}</span>
           <p class="label">Kỹ năng Bậc 1</p>${t.tier1.skills.map((k) => skillDesc(k)).join("")}
           <p class="muted">Nội tại: ${esc(t.tier1.passive)}</p>
-          <p class="label">Cây tiến hóa</p><ol class="tree">${t.tree.map((x) => `<li>${esc(x)}</li>`).join("")}<li class="hid">Nhánh ẩn: ???</li></ol>
+          <p class="label">Cây tiến hóa</p><ol class="tree">${t.tree.map((x) => `<li>${esc(x)}</li>`).join("")}<li class="hid">Nhánh ẩn: ??? · Gợi ý: ${esc(t.hiddenHint || "")}</li></ol>
           <button class="primary" data-tech="${id}">Chọn ${esc(t.name)}</button></div>`;
       }).join("")}</div>`;
     }
@@ -275,9 +279,9 @@
       h += `<section class="panel"><p class="label">${esc(sh.name)}${open ? "" : " · đóng cửa"}</p><p class="muted">${esc(sh.desc)}</p>${sh.items.map((x) => {
         const it = D.ITEMS[x.id], left = CD.shopStock(S, sid, x), cur = sh.currency === "sp" ? "ĐHT" : "¥";
         const afford = S.currency[sh.currency] >= x.price, reqOk = !x.req || CD.meets(S, x.req);
-        const info = it.stats ? statLine(it.stats) : it.use ? (it.use.hp ? "Hồi " + it.use.hp + " HP" : "") + (it.use.ce ? (it.use.hp ? ", " : "") + "Hồi " + it.use.ce + " CL" : "") + (it.use.base ? statLine(it.use.base) + " vĩnh viễn" : "") + (it.use.points ? "+" + it.use.points + " điểm" : "") + (it.use.learn ? "Dạy: " + D.SKILLS[it.use.learn].name : "") : "";
+        const info = it.stats ? itemInfo(it) : it.use ? (it.use.hp ? "Hồi " + it.use.hp + " HP" : "") + (it.use.ce ? (it.use.hp ? ", " : "") + "Hồi " + it.use.ce + " CL" : "") + (it.use.base ? statLine(it.use.base) + " vĩnh viễn" : "") + (it.use.points ? "+" + it.use.points + " điểm" : "") + (it.use.learn ? "Dạy: " + D.SKILLS[it.use.learn].name : "") : "";
         const likers = it.gift ? Object.entries(D.SOCIAL).filter(([, so]) => (so.likes || []).includes(x.id)).map(([n]) => nameOf(n)) : [];
-        return `<div class="slot"><div><strong>${esc(it.name)}</strong> <em class="q">${esc(it.quality)}${it.slot ? " · " + it.slot : ""}</em>
+        return `<div class="slot"><div><strong>${esc(it.name)}</strong> ${qChip(it)}
           <div class="muted">${esc(info)}${it.req && it.req.rank ? " · Cần Rank " + it.req.rank : ""}${x.req ? " · " + esc(CD.reqText(x.req)) : ""}${likers.length ? " · Ai thích: " + esc(likers.join(", ")) : ""}${left !== Infinity ? " · Còn " + left : ""}</div></div>
           <button class="ghost sm buy" data-buy="${sid}:${x.id}" ${open && afford && left > 0 && reqOk ? "" : "disabled"}>${x.price.toLocaleString("vi-VN")} ${cur}</button></div>`;
       }).join("")}</section>`;
@@ -293,6 +297,8 @@
       <span>Thuật thức</span><b>${S.technique ? esc(D.TECHNIQUES[S.technique].name) + " (Bậc 1)" : "Chưa thức tỉnh"}</b>
       <span>Thiên dữ</span><b>${S.restriction ? esc(D.RESTRICTIONS[S.restriction].name) : "Không"}</b></div>
       ${rc.next ? `<p class="muted">Đột phá Rank ${rc.next}: Lv ${rc.minLv} ${rc.lvOk ? "✓" : "✗"} · Sát hạch ${rc.trialOk ? "✓" : "✗"}</p>${rc.can ? `<button class="primary" data-rankup-now>Đột phá Rank ${rc.next}</button>` : ""}` : ""}
+      ${rc.next && D.RANK_REWARDS[rc.next] ? (() => { const R = D.RANK_REWARDS[rc.next], f = R.fixed, ch = typeof R.choices === "function" ? R.choices(S) : R.choices;
+        return `<details class="preview"><summary>Phần thưởng khi lên Rank ${rc.next}</summary><p class="muted">Cố định: ${[f.sp ? f.sp + " ĐHT" : "", f.yen ? f.yen.toLocaleString("vi-VN") + " yên" : "", f.item ? esc(D.ITEMS[f.item].name) : "", f.achievement ? "thành tựu " + esc(D.ACHIEVEMENTS[f.achievement] || "") : ""].filter(Boolean).join(" · ")}</p><p class="muted">Chọn 1: ${ch.map((c) => "<b>" + esc(c.name) + "</b> (" + esc(c.desc) + ")").join(" · ")}</p></details>`; })() : ""}
       ${S.rankHistory.length ? `<p class="muted">Thưởng đột phá đã chọn: ${S.rankHistory.map((x) => x.rank + " · " + esc(x.pick)).join("; ")}</p>` : ""}
     </section>`;
     h += `<section class="panel"><p class="label">Chỉ số ${S.unallocated ? `· còn <b class="hot">${S.unallocated}</b> điểm` : ""}</p><table class="stats"><tbody>${CD.STATS.map((k) =>
@@ -306,7 +312,7 @@
     h += `<section class="panel"><p class="label">Đặc tính</p>${S.traits.map((t) => `<div class="skill"><strong>${esc(D.TRAITS[t].name)}</strong><div class="muted">${esc(D.TRAITS[t].desc)}</div></div>`).join("") || `<p class="muted">Chưa chọn.</p>`}
       ${S.restriction ? `<p class="label">Thiên dữ chú phược</p><div class="skill"><strong>${esc(D.RESTRICTIONS[S.restriction].name)}</strong><div class="muted">${esc(D.RESTRICTIONS[S.restriction].desc)}</div></div>` : ""}</section>`;
     if (S.technique) { const t = D.TECHNIQUES[S.technique];
-      h += `<section class="panel"><p class="label">Thuật thức · ${esc(t.name)}</p><p class="muted">${esc(t.desc)}</p><ol class="tree">${t.tree.map((x, i) => `<li class="${i === 0 ? "cur" : ""}">${esc(x)}</li>`).join("")}<li class="hid">Nhánh ẩn: ???</li></ol></section>`; }
+      h += `<section class="panel"><p class="label">Thuật thức · ${esc(t.name)}</p><p class="muted">${esc(t.desc)}</p><ol class="tree">${t.tree.map((x, i) => `<li class="${i === 0 ? "cur" : ""}">${esc(x)}</li>`).join("")}<li class="hid">Nhánh ẩn: ??? · Gợi ý: ${esc(t.hiddenHint || "")}</li></ol></section>`; }
     h += msgBox(shopNote && tab === "char" ? [shopNote] : []);
     h += `<section class="panel"><p class="label">Kỹ năng · mỗi cấp +10% hiệu quả, tối đa cấp ${CD.SKILL_MAX}</p>${S.skills.map((k) => skillDesc(k, true)).join("")}<button class="ghost sm" data-tab="shop" data-shoptab="skills">Học thêm kỹ năng</button></section>`;
     h += `<section class="panel"><p class="label">Thành tựu</p>${S.achievements.map((a) => `<div>★ ${esc(D.ACHIEVEMENTS[a])}</div>`).join("") || `<p class="muted">Chưa có.</p>`}</section>`;
@@ -318,12 +324,12 @@
     let h = msgBox(msgs.length && tab === "inv" ? msgs : []);
     h += `<section class="panel"><p class="label">Đang trang bị</p>${["Vũ khí", "Găng tay", "Giáp", "Giày", "Phụ kiện"].map((slot) => {
       const id = S.equipment[slot], it = id && D.ITEMS[id];
-      return `<div class="slot"><span>${slot}</span>${it ? `<div><strong>${esc(it.name)}</strong> <em class="q">${it.quality}</em><div class="muted">${statLine(it.stats)}</div></div>` : `<span class="muted">Trống</span>`}</div>`;
+      return `<div class="slot"><span>${slot}</span>${it ? `<div><strong>${esc(it.name)}</strong> ${qChip(it)}<div class="muted">${esc(itemInfo(it))}</div></div>` : `<span class="muted">Trống</span>`}</div>`;
     }).join("")}</section>`;
     h += `<section class="panel"><p class="label">Hành trang</p>${S.inventory.map((x) => {
       const it = D.ITEMS[x.id];
-      return `<div class="slot"><div><strong>${esc(it.name)}</strong>${x.qty > 1 ? " ×" + x.qty : ""} <em class="q">${it.quality}${it.slot ? " · " + it.slot : ""}</em><div class="muted">${it.stats ? statLine(it.stats) + " · " : ""}${esc(it.lore || "")}${it.req && it.req.rank ? " · Cần Rank " + it.req.rank : ""}</div></div>
-        ${it.slot ? `<button class="ghost sm" data-equip="${x.id}" ${CD.canEquip(S, it) ? "" : "disabled"}>Trang bị</button>` : it.use ? `<button class="ghost sm" data-use-out="${x.id}">Dùng</button>` : ""}</div>`;
+      return `<div class="slot"><div><strong>${esc(it.name)}</strong>${x.qty > 1 ? " ×" + x.qty : ""} ${qChip(it)}<div class="muted">${it.stats ? esc(itemInfo(it)) + " · " : ""}${esc(it.lore || "")}${it.rank && !CD.canEquip(S, it) ? " · Cần Rank " + it.rank : ""}</div></div>
+        <div class="row">${it.slot ? `<button class="ghost sm" data-equip="${x.id}" ${CD.canEquip(S, it) ? "" : "disabled"}>Trang bị</button>${!it.unique ? `<button class="ghost sm" data-sell="${x.id}">Phân giải +${Math.floor(CD.itemValue(it) * 0.4).toLocaleString("vi-VN")}¥</button>` : ""}` : it.use ? `<button class="ghost sm" data-use-out="${x.id}">Dùng</button>` : ""}</div></div>`;
     }).join("") || `<p class="muted">Trống.</p>`}</section>`;
     return h;
   }
@@ -391,6 +397,8 @@
     if (ds.rankupNow !== undefined) { msgs = CD.tryRankScene(S); autosave(); tab = "story"; render(); return; }
     if (ds.claim !== undefined) { msgs = CD.claimRank(S, +ds.claim) || []; autosave(); render(); window.scrollTo({ top: 0 }); return; }
     if (ds.alloc) { keepScroll(() => { CD.allocate(S, ds.alloc, 1); autosave(); }); return; }
+    if (ds.redo !== undefined) { if (CD.redoSurvey(S)) { ivIndex = 0; msgs = ["Đã xóa câu trả lời cũ. Gojo hỏi lại từ đầu."]; S.scene = "a1_interview"; autosave(); render(); window.scrollTo({ top: 0 }); } return; }
+    if (ds.sell) { keepScroll(() => { msgs = [CD.sellItem(S, ds.sell) || "Không phân giải được."]; autosave(); }); return; }
     if (ds.equip) { msgs = CD.equip(S, ds.equip); autosave(); render(); return; }
     if (ds.useOut) { keepScroll(() => { msgs = [CD.useItem(S, ds.useOut, false)]; autosave(); }); return; }
     if (ds.buy) { keepScroll(() => { const [sid, id] = ds.buy.split(":"); const r = CD.buy(S, sid, id); shopNote = r.ok ? r.msgs.join(" · ") : r.msg; autosave(); }); return; }

@@ -248,3 +248,11 @@ details summary.gap { cursor: pointer }
 .uprow { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap }
 .seg.page { margin: 12px 0 0 }
 .seg.page button { padding: 9px }
+
+/* Bậc & Phẩm */
+.q { font-style: normal; font-size: .72rem; padding: 0 6px; border-radius: 3px; border: 1px solid currentColor; white-space: nowrap }
+.q0 { color: #a8abb8 } .q1 { color: #7fd39b } .q2 { color: #6fb2ff } .q3 { color: #c08bff } .q4 { color: #f0c35a } .q5 { color: #ff6b6b }
+.q6 { color: #fff; border-color: transparent; background: linear-gradient(90deg, #cc3640, #d9b45f, #5fbf8a, #6fb2ff, #8a6cff) }
+.sr { font-style: normal; font-size: .68rem; padding: 0 5px; border-radius: 3px; border: 1px solid currentColor; color: var(--mist); white-space: nowrap }
+.sr.r1 { color: #9fd3b0 } .sr.r2 { color: #7fb6ff } .sr.r3 { color: #c79cff } .sr.r4 { color: var(--gold) } .sr.r5, .sr.r6, .sr.r7 { color: var(--seal) }
+.preview { margin-top: 8px; font-size: .88rem } .preview summary { cursor: pointer; color: var(--gold) }
