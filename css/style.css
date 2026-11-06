@@ -256,3 +256,13 @@ details summary.gap { cursor: pointer }
 .sr { font-style: normal; font-size: .68rem; padding: 0 5px; border-radius: 3px; border: 1px solid currentColor; color: var(--mist); white-space: nowrap }
 .sr.r1 { color: #9fd3b0 } .sr.r2 { color: #7fb6ff } .sr.r3 { color: #c79cff } .sr.r4 { color: var(--gold) } .sr.r5, .sr.r6, .sr.r7 { color: var(--seal) }
 .preview { margin-top: 8px; font-size: .88rem } .preview summary { cursor: pointer; color: var(--gold) }
+
+/* Lãnh địa */
+.domainp { border-color: #4b3f8f; background: linear-gradient(160deg, #1d1530, var(--ink-2)) }
+.checks { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 2px; font-size: .85rem; color: #ff9a9a } .checks li.ok { color: #9fe0b8 }
+.act.domainb { grid-column: 1 / -1; border-color: var(--curse); background: linear-gradient(90deg, #2c1f45, var(--ink-3)) }
+.arena.indomain .bg { filter: hue-rotate(220deg) saturate(1.6) brightness(.55) }
+.dveil { position: absolute; inset: 0; z-index: 1; pointer-events: none; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 10px;
+  background: radial-gradient(circle at 50% 60%, transparent 30%, #3a1f6e88 75%); animation: rise .5s ease }
+.dveil b { font-size: 1.1rem; color: #e9dcff; text-shadow: 0 0 10px #8a6cff, 0 1px 2px #000; letter-spacing: .06em }
+.arena .foes, .arena .mept, .arena .tchip { z-index: 2 }

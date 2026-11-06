@@ -74,7 +74,7 @@
       milestonesHit: [],
       ledger: [], txDone: [], log: [],
       known: [],
-      hub: null, hubFight: null, shopBought: {}, pendingRank: null, rankHistory: [], skillLv: {}, genItems: {}, ivTraces: {}, ivEff: { moral: 0, anti: 0 },
+      hub: null, hubFight: null, shopBought: {}, pendingRank: null, rankHistory: [], skillLv: {}, genItems: {}, domainStage: 0, ivTraces: {}, ivEff: { moral: 0, anti: 0 },
     };
     CD.recalc(s, true);
     return s;
@@ -668,11 +668,14 @@
         if (!c.opts.canFlee) { L.push("Không có đường thoát."); }
         else if (rng() < p) { L.push("Shen thoát khỏi trận chiến."); c.over = "flee"; return; }
         else L.push("Bỏ chạy thất bại (" + Math.round(p * 100) + "%).");
+      } else if (action.type === "domain") {
+        if (!CD.castDomain(s, c)) { L.push("Chưa thể triển khai lãnh địa."); return; }
       } else if (action.type === "item") {
         L.push(CD.useItem(s, action.id, true) || "Không dùng được.");
       } else if (action.type === "skill") {
         const sk = D().SKILLS[action.id];
         if ((c.cds[action.id] || 0) > 0 || !this.affordable(s, sk)) { L.push("Kỹ năng chưa sẵn sàng."); return; }
+        if (sk.tech && c.burn > 0) { L.push("Thuật thức đang bị cháy sau lãnh địa."); return; }
         if (sk.cost) {
           if (sk.cost.ce) s.cur.ce -= sk.cost.ce;
           if (sk.cost.sta) s.cur.sta -= sk.cost.sta;
@@ -696,9 +699,9 @@
         const hits = e.hits || 1;
         for (let h = 0; h < hits && t.hp > 0; h++) {
           const teva = Math.min(0.4, (0.4 * t.stats.AGI) / (t.stats.AGI + 100));
-          if (!e.sure && !(focus && focus.sure) && rng() < teva) { L.push(t.name + " né được " + sk.name + (hits > 1 ? " (đòn " + (h + 1) + ")" : "") + "."); continue; }
+          if (!e.sure && !(focus && focus.sure) && !(c.domain && sk.tech && c.domain.st.sure) && rng() < teva) { L.push(t.name + " né được " + sk.name + (hits > 1 ? " (đòn " + (h + 1) + ")" : "") + "."); continue; }
           let atk = e.dmg.src === "cpow" ? d.cpow : e.dmg.src === "hybrid" ? d.patk + 0.5 * d.cpow : d.patk;
-          let mult = e.dmg.mult * lvm * (focus ? focus.mult || 1 : 1);
+          let mult = e.dmg.mult * lvm * (focus ? focus.mult || 1 : 1) * (c.domain && sk.tech ? c.domain.st.mult : 1);
           if (e.detonate) { mult *= 1 + t.marks; L.push("Kích nổ " + t.marks + " ấn."); t.marks = 0; }
           if (e.release) { atk += c.stored; L.push("Trả lại " + c.stored + " sát thương đã hứng."); c.stored = 0; }
           let def = e.dmg.src === "patk" ? t.d.pdef : t.d.cdef;
@@ -722,16 +725,23 @@
         if (e.hp <= 0 && !e.dead) { e.dead = true; L.push(e.name + " bị tiêu diệt."); }
       });
       if (!this.target(c)) { c.over = "win"; c.history.push({ round: c.round, lines: L.slice() }); return; }
+      // Lãnh địa tác động trước lượt kẻ địch
+      if (c.domain && CD.domainTick) {
+        CD.domainTick(s, c, rng);
+        c.enemies.forEach((e) => { if (e.hp <= 0 && !e.dead) { e.dead = true; L.push(e.name + " bị tiêu diệt trong lãnh địa."); } });
+        if (!this.target(c)) { c.over = "win"; c.history.push({ round: c.round, lines: L.slice() }); return; }
+      }
+      const dE = c.domain && c.domain.dm.enemy ? c.domain.dm.enemy : {}, dK = c.domain ? c.domain.st.tick : 0;
       // Lượt kẻ địch
       c.enemies.filter((e) => e.hp > 0).forEach((e) => {
         if (e.stun) { e.stun = 0; L.push(e.name + " không thể hành động."); return; }
         const sk = (e.skills.find((x) => !e.cds[x.name]) || { name: "Tấn công", mult: 1.2, src: "patk" });
         if (sk.cd) e.cds[sk.name] = sk.cd + 1;
         const pm = CD.mods(s), peff = CD.effective(s).stats, pd = CD.derive(peff, s.level, pm);
-        let hitMod = 1; e.debuff.forEach((b) => b.stat === "hit" && (hitMod -= b.pct));
+        let hitMod = 1 - (dE.hit || 0) * dK; e.debuff.forEach((b) => b.stat === "hit" && (hitMod -= b.pct));
         const miss = rng() > hitMod || rng() < pd.evasion;
         if (miss) { L.push(e.name + " dùng " + sk.name + " nhưng trượt."); return; }
-        let atkMod = 1; e.debuff.forEach((b) => b.stat === "atk" && (atkMod -= b.pct));
+        let atkMod = 1 - (dE.atk || 0) * dK; e.debuff.forEach((b) => b.stat === "atk" && (atkMod -= b.pct)); atkMod = Math.max(0.1, atkMod);
         const atk = (sk.src === "cpow" ? e.d.cpow : e.d.patk) * atkMod;
         const def = sk.src === "cpow" ? pd.cdef : pd.pdef;
         let dmg = CD.calcDamage(atk, sk.mult, def, { crit: rng() < e.d.crit });
@@ -739,11 +749,15 @@
         if (c.guard) dmg = Math.floor(dmg * (1 - c.guard));
         s.cur.hp -= dmg; c.hits.me += dmg;
         L.push(e.name + " dùng " + sk.name + ": −" + dmg + " HP.");
+        if (dE.reflect) { const r = Math.floor(dmg * dE.reflect * dK); if (r > 0) { e.hp -= r; L.push("Gương lãnh địa phản lại " + r + " sát thương."); } }
         if (s.cur.hp <= 0 && s.traits.includes("ychi") && !c.ychiUsed) { s.cur.hp = 1; c.ychiUsed = true; L.push("Ý Chí Bất Khuất: Shen trụ lại với 1 HP!"); }
       });
       // cập nhật thời hạn
       c.enemies.forEach((e) => { e.debuff = e.debuff.filter((b) => --b.turns > 0); for (const k in e.cds) if (e.cds[k] > 0) e.cds[k]--; });
       for (const k in c.cds) if (c.cds[k] > 0) c.cds[k]--;
+      if (CD.domainEndRound) CD.domainEndRound(c);
+      c.enemies.forEach((e) => { if (e.hp <= 0 && !e.dead) { e.dead = true; L.push(e.name + " bị tiêu diệt."); } });
+      if (!this.target(c)) { c.over = "win"; c.history.push({ round: c.round, lines: L.slice() }); return; }
       const d = CD.derived(s), m = CD.mods(s);
       s.cur.ce = Math.min(d.maxCE, s.cur.ce + m.ceRegen);
       s.cur.sta = Math.min(d.maxSTA, s.cur.sta + m.staRegen);

@@ -1,5 +1,5 @@
 /* Chạy: node tests/engine.test.js  — unit test công thức + chơi thử tự động toàn bộ Arc 1 */
-require("../js/data.js"); require("../js/world.js"); require("../js/gear.js"); require("../js/story.js"); require("../js/story2.js"); require("../js/engine.js");
+require("../js/data.js"); require("../js/world.js"); require("../js/gear.js"); require("../js/domain.js"); require("../js/story.js"); require("../js/story2.js"); require("../js/engine.js");
 const CD = globalThis.CD;
 let pass = 0, fail = 0, D2;
 const eq = (name, a, b) => { if (JSON.stringify(a) === JSON.stringify(b)) pass++; else { fail++; console.log("FAIL", name, "→", a, "≠", b); } };
@@ -111,6 +111,20 @@ Object.entries(S).forEach(([id, sc]) => {
   ok("thuật thức nào cũng có nhánh ẩn", Object.values(CD.DATA.TECHNIQUES).every((t) => t.hidden && t.hiddenHint)); }
 ok("mọi Rank D→SSS có thưởng", ["D", "C", "B", "A", "S", "SS", "SSS"].every((r) => CD.DATA.RANK_REWARDS[r]));
 ok("mọi kỹ năng có Bậc", Object.values(CD.DATA.SKILLS).every((k) => CD.RANKS.includes(k.rank)));
+
+/* ---- Bành trướng lãnh địa ---- */
+{ const s = CD.newCampaign(); CD.setTechnique(s, "trongap");
+  eq("chưa đủ điều kiện", CD.domainNext(s).ready, false); eq("không mở được", CD.unlockDomain(s).ok, false);
+  s.rank = "B"; s.level = 35; s.base.INT = 40; s.base.WIS = 50; s.currency.sp = 500; CD.recalc(s, true);
+  ok("đủ điều kiện cấp 1", CD.domainNext(s).ready); ok("lĩnh ngộ", CD.unlockDomain(s).ok); eq("trừ ĐHT", s.currency.sp, 200); eq("cấp 1", s.domainStage, 1);
+  eq("cấp 2 cần Rank A", CD.domainNext(s).checks.find((c) => c.label === "Rank").ok, false);
+  const c = CD.combat.start(s, ["c_tunnel"]); const ce0 = s.cur.ce; const r = () => 0.5;
+  CD.combat.playerAct(s, c, { type: "domain" }, r); ok("triển khai lãnh địa", c.domainUsed && s.cur.ce < ce0);
+  ok("lãnh địa gây sát thương mỗi lượt", c.log.some((l) => /Lãnh địa gây/.test(l)));
+  eq("không dùng lần 2", CD.canDomain(s, c), false);
+  for (let i = 0; i < 3 && !c.over; i++) CD.combat.playerAct(s, c, { type: "skill", id: "sk_guard" }, r);
+  if (!c.over) { ok("thuật thức bị cháy sau lãnh địa", c.burn > 0); CD.combat.playerAct(s, c, { type: "skill", id: "tk_de" }, r); ok("chặn kỹ năng thuật thức", c.log.some((l) => /bị cháy/.test(l))); } }
+ok("8 lãnh địa cho 8 thuật thức", Object.keys(CD.DATA.TECHNIQUES).every((k) => CD.DATA.DOMAINS[k]));
 
 /* ---- Chơi thử tự động qua 3 arc ---- */
 function rngFrom(seed) { let x = seed >>> 0 || 1; return () => ((x ^= x << 13), (x ^= x >>> 17), (x ^= x << 5), (x >>> 0) / 4294967296); }

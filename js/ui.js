@@ -214,7 +214,7 @@
     const sc = SC[S.scene], title = hubF ? hubF.title : sc.title;
     const env = hubF ? hubEnv() : CD.ART.env(S.scene);
     const tIdx = c.enemies.indexOf(CD.combat.target(c));
-    let h = `<div class="arena t-${env.t}">${CD.ART.backdrop(S.scene, env)}<span class="tchip">Lượt ${c.round} · ${esc(title)}</span>
+    let h = `<div class="arena t-${env.t} ${c.domain ? "indomain" : ""}">${c.domain ? `<div class="dveil"><b>${esc(c.domain.dm.name)}</b></div>` : ""}${CD.ART.backdrop(S.scene, env)}<span class="tchip">Lượt ${c.round} · ${esc(title)}</span>
       <div class="foes">${c.enemies.map((e, i) => `<button class="fpt ${e.hp <= 0 ? "dead" : ""} ${i === tIdx && c.enemies.length > 1 ? "target" : ""}" data-target="${i}" ${e.hp <= 0 ? "disabled" : ""}>
         ${CD.ART.portrait(e.id)}${c.hits && c.hits.foe[i] ? `<b class="dmg">−${c.hits.foe[i]}</b>` : ""}</button>`).join("")}</div>
       <div class="mept">${CD.ART.portrait("shen")}${c.hits && c.hits.me ? `<b class="dmg me">−${c.hits.me}</b>` : ""}</div></div>`;
@@ -229,7 +229,7 @@
           : e.hp > 0 ? `<button class="link" data-observe="${i}">Quan sát (miễn phí)</button>` : ""}
       </div>`;
     }).join("");
-    const mine = [c.reflectArmed ? "Gương đang dựng" : "", c.stored ? "Đã tích " + c.stored + " sát thương" : ""].filter(Boolean);
+    const mine = [c.domain ? "Lãnh địa " + c.domain.dm.name + ": còn " + c.domain.turns + " lượt" : "", c.burn > 0 ? "Thuật thức cháy: " + c.burn + " lượt" : "", c.reflectArmed ? "Gương đang dựng" : "", c.stored ? "Đã tích " + c.stored + " sát thương" : ""].filter(Boolean);
     h += `<div class="me"><div class="foe-h"><strong>Shen</strong>${rankChip(S.rank)}<span class="muted">Lv ${S.level}</span></div>${bar(S.cur.hp, d.maxHP, "hp")}<div class="two">${bar(S.cur.ce, d.maxCE, "ce")}${bar(S.cur.sta, d.maxSTA, "sta")}</div>${mine.length ? `<div class="chips">${mine.map((x) => `<i class="good">${esc(x)}</i>`).join("")}</div>` : ""}</div>`;
     if (c.log.length) h += `<div class="clog">${c.log.map((l) => `<div class="${/gây|Kích|Trả lại|Nuốt/.test(l) ? "out" : / −\d+ HP|Khế ước/.test(l) ? "in" : ""}">${esc(l)}</div>`).join("")}</div>`;
     if ((c.history || []).length > 1) h += `<details class="hist"><summary>Nhật ký trận (${c.history.length} lượt)</summary>${c.history.slice().reverse().map((r) => `<div class="hr"><b>Lượt ${r.round}</b>${r.lines.map((l) => `<div>${esc(l)}</div>`).join("")}</div>`).join("")}</details>`;
@@ -247,8 +247,8 @@
     const canFlee = hubF ? hubF.canFlee : sc.combat.canFlee;
     h += `<div class="dock"><div class="ready"><span><b>Sẵn sàng:</b> ${ready.map(esc).join(", ") || "—"}</span>${cds.length ? `<span><b>Hồi chiêu:</b> ${cds.map(esc).join(", ")}</span>` : ""}</div>
       <div class="seg">${[["skill", "Kỹ năng"], ["item", "Vật phẩm" + (items.length ? " (" + items.reduce((a, x) => a + x.qty, 0) + ")" : "")], ["other", "Khác"]].map(([k, n]) => `<button data-dock="${k}" class="${dock === k ? "on" : ""}">${n}</button>`).join("")}</div>
-      <div class="acts">${dock === "skill" ? list.map((x) => {
-        const can = !x.cd && CD.combat.affordable(S, x.sk);
+      <div class="acts">${dock === "skill" ? (CD.domainInfo(S) ? `<button class="act domainb" data-domain ${CD.canDomain(S, c) ? "" : "disabled"}><span>Bành trướng lãnh địa: ${esc(CD.domainInfo(S).dm.name)}</span><small class="fx">${esc(CD.domainInfo(S).st.name)} · ${CD.domainInfo(S).st.turns} lượt · thuật thức ×${CD.domainInfo(S).st.mult}</small><small>${c.domainUsed ? "Đã dùng trong trận này" : CD.domainCost(S) + " Chú lực · 1 lần/trận"}</small></button>` : "") + list.map((x) => {
+        const can = !x.cd && CD.combat.affordable(S, x.sk) && !(x.sk.tech && c.burn > 0);
         return `<button class="act ${x.sk.tech ? "tech" : ""}" data-skill="${x.id}" ${can ? "" : "disabled"}><span>${esc(x.sk.name)}${CD.skillLv(S, x.id) > 1 ? " <em class=\"lv\">C" + CD.skillLv(S, x.id) + "</em>" : ""}</span><small class="fx">${esc(shortFx(x.sk))}</small><small>${x.cd ? "Hồi chiêu " + x.cd + " lượt" : costText(x.sk)}</small></button>`;
       }).join("") : dock === "item" ? (items.map((x) => `<button class="act item" data-use="${x.id}"><span>${esc(D.ITEMS[x.id].name)} ×${x.qty}</span><small>${esc(D.ITEMS[x.id].lore)}</small></button>`).join("") || `<p class="muted">Không có vật phẩm dùng được trong trận.</p>`)
         : c.enemies.map((e, i) => e.hp > 0 && !c.observed.includes(e.id) ? `<button class="act" data-observe="${i}"><span>Quan sát ${esc(e.name)}</span><small>Miễn phí, không tốn lượt</small></button>` : "").join("") + (canFlee ? `<button class="act flee" data-flee><span>Bỏ chạy</span><small>Dựa trên chênh lệch AGI</small></button>` : `<p class="muted">Trận này không thể bỏ chạy.</p>`)}</div></div>`;
@@ -314,6 +314,15 @@
     if (S.technique) { const t = D.TECHNIQUES[S.technique];
       h += `<section class="panel"><p class="label">Thuật thức · ${esc(t.name)}</p><p class="muted">${esc(t.desc)}</p><ol class="tree">${t.tree.map((x, i) => `<li class="${i === 0 ? "cur" : ""}">${esc(x)}</li>`).join("")}<li class="hid">Nhánh ẩn: ??? · Gợi ý: ${esc(t.hiddenHint || "")}</li></ol></section>`; }
     h += msgBox(shopNote && tab === "char" ? [shopNote] : []);
+    if (S.technique) {
+      const dm = D.DOMAINS[S.technique], info = CD.domainInfo(S), nx = CD.domainNext(S);
+      h += `<section class="panel domainp"><p class="label">Bành trướng lãnh địa · ${esc(dm.name)}</p><p class="muted"><i>${esc(dm.text)}</i></p><p class="muted">Hiệu ứng: ${esc(dm.effect)}</p>
+        ${info ? `<div class="skill"><strong>Hiện tại: ${esc(info.st.name)}</strong><div class="muted">${esc(info.st.desc)}</div></div>` : `<p class="muted">Chưa lĩnh ngộ.</p>`}
+        ${nx ? `<div class="skill"><strong>${info ? "Cấp tiếp theo" : "Điều kiện lĩnh ngộ"}: ${esc(nx.stage.name)}</strong><div class="muted">${esc(nx.stage.desc)}</div>
+          <ul class="checks">${nx.checks.map((c) => `<li class="${c.ok ? "ok" : ""}">${c.ok ? "✓" : "✗"} ${esc(c.label)}: ${esc(String(c.have))} / ${esc(String(c.need))}</li>`).join("")}</ul>
+          <button class="primary" data-domain-unlock ${nx.ready ? "" : "disabled"}>Lĩnh ngộ (${nx.stage.sp} ĐHT)</button></div>` : `<p class="hot">Đã đạt cấp lãnh địa cao nhất.</p>`}
+      </section>`;
+    }
     h += `<section class="panel"><p class="label">Kỹ năng · mỗi cấp +10% hiệu quả, tối đa cấp ${CD.SKILL_MAX}</p>${S.skills.map((k) => skillDesc(k, true)).join("")}<button class="ghost sm" data-tab="shop" data-shoptab="skills">Học thêm kỹ năng</button></section>`;
     h += `<section class="panel"><p class="label">Thành tựu</p>${S.achievements.map((a) => `<div>★ ${esc(D.ACHIEVEMENTS[a])}</div>`).join("") || `<p class="muted">Chưa có.</p>`}</section>`;
     return h;
@@ -372,7 +381,7 @@
     $("#hud").innerHTML = header();
     const sysOn = S.flags.includes("system"), inFight = combat && !combat.over && tab === "story";
     $("#main").innerHTML = tab === "story" || !sysOn ? storyView() : tab === "char" ? charView() : tab === "inv" ? invView() : tab === "shop" ? shopView() : tab === "world" ? worldView() : saveView();
-    $("#tabs").innerHTML = sysOn && !inFight ? TABS.map(([k, n]) => `<button data-tab="${k}" class="${tab === k ? "on" : ""}">${n}${k === "char" && S.unallocated ? "<i></i>" : ""}${k === "story" && S.pendingRank ? "<i></i>" : ""}</button>`).join("") : "";
+    $("#tabs").innerHTML = sysOn && !inFight ? TABS.map(([k, n]) => `<button data-tab="${k}" class="${tab === k ? "on" : ""}">${n}${k === "char" && (S.unallocated || (CD.domainNext(S) || {}).ready) ? "<i></i>" : ""}${k === "story" && S.pendingRank ? "<i></i>" : ""}</button>`).join("") : "";
     $("#tabs").hidden = !sysOn || inFight;
     document.body.classList.toggle("fighting", !!inFight);
   }
@@ -397,6 +406,7 @@
     if (ds.rankupNow !== undefined) { msgs = CD.tryRankScene(S); autosave(); tab = "story"; render(); return; }
     if (ds.claim !== undefined) { msgs = CD.claimRank(S, +ds.claim) || []; autosave(); render(); window.scrollTo({ top: 0 }); return; }
     if (ds.alloc) { keepScroll(() => { CD.allocate(S, ds.alloc, 1); autosave(); }); return; }
+    if (ds.domainUnlock !== undefined) { keepScroll(() => { const r = CD.unlockDomain(S); shopNote = r.ok ? r.msgs.join(" · ") : r.msg; autosave(); }); return; }
     if (ds.redo !== undefined) { if (CD.redoSurvey(S)) { ivIndex = 0; msgs = ["Đã xóa câu trả lời cũ. Gojo hỏi lại từ đầu."]; S.scene = "a1_interview"; autosave(); render(); window.scrollTo({ top: 0 }); } return; }
     if (ds.sell) { keepScroll(() => { msgs = [CD.sellItem(S, ds.sell) || "Không phân giải được."]; autosave(); }); return; }
     if (ds.equip) { msgs = CD.equip(S, ds.equip); autosave(); render(); return; }
@@ -427,6 +437,7 @@
       if (ds.observe !== undefined) { keepScroll(() => CD.combat.observe(S, combat, combat.enemies[+ds.observe])); return; }
       let act = null;
       if (ds.skill) act = { type: "skill", id: ds.skill };
+      if (ds.domain !== undefined) act = { type: "domain" };
       if (ds.use) act = { type: "item", id: ds.use };
       if (ds.flee !== undefined) act = { type: "flee" };
       if (act) {
