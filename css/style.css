@@ -235,3 +235,4 @@ details summary.gap { cursor: pointer }
 .rankup { margin-top: 10px; background: linear-gradient(160deg, #2a1d4d, var(--ink-2)); border: 1px solid var(--gold); border-radius: 4px; padding: 18px 16px }
 .rankup h2 { font-family: var(--display); margin: 0 0 10px; font-size: 1.5rem; color: var(--gold) }
 .pickable { cursor: pointer } .pickable:hover { border-color: var(--gold) }
+.ver { text-align: center; font-size: .7rem; color: var(--mist); opacity: .6; margin: 0 0 80px }
