@@ -74,7 +74,7 @@
       milestonesHit: [],
       ledger: [], txDone: [], log: [],
       known: [],
-      hub: null, hubFight: null, shopBought: {}, pendingRank: null, rankHistory: [], skillLv: {}, genItems: {}, domainStage: 0, ivTraces: {}, ivEff: { moral: 0, anti: 0 },
+      fates: {}, hub: null, hubFight: null, shopBought: {}, pendingRank: null, rankHistory: [], skillLv: {}, genItems: {}, domainStage: 0, ivTraces: {}, ivEff: { moral: 0, anti: 0 },
     };
     CD.recalc(s, true);
     return s;
@@ -315,6 +315,11 @@
     if (eff.arc) s.world.arc = eff.arc;
     if (eff.ledger) CD.addLedger(s, eff.ledger);
     if (eff.achievement && !s.achievements.includes(eff.achievement)) { s.achievements.push(eff.achievement); msgs.push("Thành tựu: " + D().ACHIEVEMENTS[eff.achievement]); }
+    if (eff.fate) for (const k in eff.fate) {
+      const prev = s.fates[k]; s.fates[k] = eff.fate[k];
+      const canon = (D().FATE_CANON || {})[k], n = D().NPCS[k];
+      if (prev !== eff.fate[k]) msgs.push("SỐ PHẬN · " + (n ? n.name : k) + ": " + (CD.FATE_LABEL[eff.fate[k]] || eff.fate[k]) + (canon && canon !== eff.fate[k] ? " (khác nguyên tác)" : ""));
+    }
     if (eff.points) { s.unallocated += eff.points; msgs.push("+" + eff.points + " điểm chỉ số tự do"); }
     if (eff.exp) msgs.push(...CD.gainExp(s, eff.exp));
     CD.recalc(s);
@@ -419,9 +424,11 @@
     return s.hub;
   };
   CD.hubDef = (s) => s.hub && D().HUBS[s.hub.id];
+  CD.FATE_LABEL = { alive: "Còn sống", dead: "Tử vong", injured: "Trọng thương", sealed: "Bị phong ấn", captured: "Bị bắt giữ", retired: "Rút lui khỏi tuyến đầu", missing: "Mất tích" };
+  CD.npcAvailable = (s, id) => { const f = s.fates && s.fates[id], SO = D().SOCIAL[id]; return !["dead", "sealed", "captured", "missing"].includes(f) && !(SO && SO.showIf && !s.flags.includes(SO.showIf)); };
   CD.hubNpcs = function (s, loc) {
     const L = CD.hubDef(s).locations[loc || s.hub.loc], n = L.npcs || [];
-    return (Array.isArray(n[0]) ? n[CD.slotOf(s.hub.time)] || [] : n).filter((id) => !(D().SOCIAL[id] && D().SOCIAL[id].hideIf && s.flags.includes(D().SOCIAL[id].hideIf)));
+    return (Array.isArray(n[0]) ? n[CD.slotOf(s.hub.time)] || [] : n).filter((id) => !(D().SOCIAL[id] && D().SOCIAL[id].hideIf && s.flags.includes(D().SOCIAL[id].hideIf)) && CD.npcAvailable(s, id));
   };
   CD.timeLeft = (s) => CD.DAY_END - s.hub.time;
   CD.canSpend = (s, kind) => CD.timeLeft(s) >= (CD.ACT_MIN[kind] || 0);

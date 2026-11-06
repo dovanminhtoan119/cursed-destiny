@@ -223,7 +223,7 @@
       ] },
 
     a2_end_alive: { chapter: "Hết Arc 2", title: "Bữa cà ri", env: "night/street", cast: ["shen", "junpei", "nagi", "itadori"],
-      onEnter: { exp: 3500, sp: 60, achievement: "a_junpei", quest: [{ id: "q_kawasaki", status: "done" }, { id: "q_junpei", status: "done" }], rep: { danthuong: 5, tokyo: 5 },
+      onEnter: { exp: 3500, sp: 60, achievement: "a_junpei", fate: { junpei: "alive", nagi: "alive" }, quest: [{ id: "q_kawasaki", status: "done" }, { id: "q_junpei", status: "done" }], rep: { danthuong: 5, tokyo: 5 },
         ledger: { action: "Yoshino Junpei sống sót và từ chối Mahito", witnesses: "Itadori, Nanami, Mahito", consequence: "Mahito không có được con tốt mình muốn", trigger: "Junpei có tiềm năng chú lực. Học viện có thể để mắt tới cậu ta" } },
       text: [
         "Tối hôm đó, bà Nagi nấu một nồi cà ri to nhất từ trước tới nay. Itadori ăn ba bát. Nanami từ chối lời mời, nhưng nhận một hộp mang về.",
@@ -235,7 +235,7 @@
       choices: [{ t: "Bắt đầu Arc 3: Giao lưu Kyoto", go: "a3_start", eff: { known: "dong_chay_ban_dau" } }] },
 
     a2_end_dead: { chapter: "Hết Arc 2", title: "Những hình dạng", env: "rain/street", cast: ["shen", "itadori", "nanami"],
-      onEnter: { exp: 3500, sp: 40, quest: [{ id: "q_kawasaki", status: "done" }, { id: "q_junpei", status: "failed" }], rep: { tokyo: 5 },
+      onEnter: { exp: 3500, sp: 40, fate: { junpei: "dead", nagi: "dead" }, quest: [{ id: "q_kawasaki", status: "done" }, { id: "q_junpei", status: "failed" }], rep: { tokyo: 5 },
         ledger: { action: "Yoshino Junpei bị Mahito biến đổi và tử vong", witnesses: "Shen, Itadori", consequence: "Itadori thề sẽ giết Mahito" } },
       text: [
         "Trời mưa suốt đêm. Itadori ngồi dưới mái hiên, không nói gì.",
@@ -452,8 +452,7 @@
         "Đêm đó, Gojo gọi riêng Shen ra mái chùa.",
         "> Thứ bị đánh cắp khỏi kho là ba chú vật rất cũ. Chúng được gọi là Cửu tướng Chú thai. Chúng không chết. Chúng chỉ đang ngủ.",
         "> Và kẻ đánh cắp biết chính xác chúng nằm ở đâu.",
-        "[Arc 4 — Cửu tướng Chú thai: đang được phát triển.]",
       ],
-      choices: [] },
+      choices: [{ t: "Bắt đầu Arc 4: Cửu tướng Chú thai", go: "a4_start" }] },
   });
 })(typeof window !== "undefined" ? window : globalThis);

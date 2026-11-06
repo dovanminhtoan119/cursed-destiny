@@ -266,3 +266,5 @@ details summary.gap { cursor: pointer }
   background: radial-gradient(circle at 50% 60%, transparent 30%, #3a1f6e88 75%); animation: rise .5s ease }
 .dveil b { font-size: 1.1rem; color: #e9dcff; text-shadow: 0 0 10px #8a6cff, 0 1px 2px #000; letter-spacing: .06em }
 .arena .foes, .arena .mept, .arena .tchip { z-index: 2 }
+
+.fate.changed { background: linear-gradient(90deg, #1d3a2c55, transparent); border-radius: 4px } .fate.changed b { color: #9fe0b8 }

@@ -241,4 +241,37 @@
       <circle cx="50" cy="52" r="18" fill="#3a1f2c"/><ellipse cx="50" cy="48" rx="9" ry="6" fill="#efd6d6"/><circle cx="50" cy="48" r="4" fill="#b3121e"/><circle cx="50" cy="48" r="1.6" fill="#000"/>
       <path d="M40 60 Q50 66 60 60" stroke="#efd6d6" stroke-width="2" fill="none"/><path d="M6 20 L94 84 M6 84 L94 20" stroke="#8b8f9c" stroke-width="2" stroke-dasharray="4 3" opacity=".6"/>`,
   });
+  /* Arc 4–6: chú linh & chú nguyền sư nguyên bản */
+  Object.assign(CURSE_ART, {
+    c_a4_a: `<rect x="0" y="70" width="100" height="30" fill="#2a2a1c"/><path d="M20 100 C16 70 30 40 50 34 C70 40 84 70 80 100 Z" fill="#4a4128"/>
+      <path d="M30 60 Q50 50 70 60" stroke="#6b5f3a" stroke-width="4" fill="none"/><circle cx="42" cy="50" r="4" fill="#e8d36a"/><circle cx="58" cy="50" r="4" fill="#e8d36a"/>
+      <path d="M38 66 Q50 76 62 66" stroke="#12100a" stroke-width="3" fill="none"/>${[24, 40, 58, 74].map((x) => `<path d="M${x} 80 q2 10 0 18" stroke="#4a4128" stroke-width="4" fill="none"/>`).join("")}`,
+    c_a4_b: `<rect x="20" y="10" width="60" height="86" fill="#3a3040" stroke="#5a4c66" stroke-width="2"/><circle cx="70" cy="54" r="3" fill="#d9b45f"/>
+      <rect x="20" y="10" width="60" height="86" fill="#000" opacity=".25"/><path d="M34 30 C30 50 34 70 30 90 M46 26 C44 48 48 70 44 92" stroke="#d9d9e0" stroke-width="3" fill="none" opacity=".75"/>
+      <ellipse cx="54" cy="40" rx="8" ry="11" fill="#d9d9e0" opacity=".9"/><circle cx="51" cy="38" r="2" fill="#0a0a10"/><circle cx="57" cy="38" r="2" fill="#0a0a10"/><path d="M50 46 L58 46" stroke="#0a0a10" stroke-width="1.5"/>
+      ${[30, 48, 66].map((y) => `<path d="M80 ${y} L88 ${y - 3}" stroke="#d9d9e0" stroke-width="2"/>`).join("")}`,
+    c_bridge: `<rect x="0" y="0" width="100" height="30" fill="#2a2f3a"/>${[10, 50, 90].map((x) => `<rect x="${x - 4}" y="0" width="8" height="40" fill="#3a404c"/>`).join("")}
+      <rect x="0" y="62" width="100" height="38" fill="#0e1a22"/><path d="M14 100 C10 70 26 44 50 44 C74 44 90 70 86 100 Z" fill="#6c7f86"/>
+      <ellipse cx="50" cy="60" rx="18" ry="14" fill="#8ea1a7"/><circle cx="43" cy="58" r="4" fill="#0a0a10"/><circle cx="57" cy="58" r="4" fill="#0a0a10"/><ellipse cx="50" cy="68" rx="5" ry="3" fill="#0a0a10"/>
+      ${[20, 34, 66, 80].map((x) => `<path d="M${x} 74 l-3 -10 m3 10 l0 -11 m0 11 l3 -10" stroke="#c9d6dc" stroke-width="1.5"/>`).join("")}`,
+    c_a6_a: `<rect x="0" y="0" width="100" height="100" fill="#000" opacity=".3"/><path d="M12 78 L20 50 L80 50 L88 78 Z" fill="#2c3045"/><rect x="8" y="76" width="84" height="12" rx="3" fill="#2c3045"/>
+      <circle cx="26" cy="68" r="8" fill="#fff6c8"/><circle cx="74" cy="68" r="8" fill="#fff6c8"/><circle cx="26" cy="68" r="3" fill="#cc3640"/><circle cx="74" cy="68" r="3" fill="#cc3640"/>
+      <path d="M34 80 L66 80 L62 88 L38 88 Z" fill="#0a0a10"/>${[38, 44, 50, 56].map((x) => `<path d="M${x} 80 l3 6 l3 -6" fill="#e9e2cf"/>`).join("")}<path d="M28 50 L36 34 L64 34 L72 50" fill="#3a3f55"/>`,
+    c_a6_b: `<path d="M20 96 C18 60 32 30 50 30 C68 30 82 60 80 96 Z" fill="#2a1d14"/><path d="M28 34 C32 18 68 18 72 34" fill="#e07a2a"/>
+      <path d="M36 46 L44 40 L44 50 Z M64 46 L56 40 L56 50 Z" fill="#ffcf70"/><path d="M34 62 L40 58 L46 64 L50 58 L54 64 L60 58 L66 62 L60 70 L40 70 Z" fill="#ffcf70"/>
+      <path d="M20 70 C8 64 6 50 12 42 M80 70 C92 64 94 50 88 42" stroke="#2a1d14" stroke-width="6" fill="none" stroke-linecap="round"/>`,
+    c_train: `<rect x="0" y="0" width="100" height="100" fill="#000" opacity=".3"/><rect x="14" y="20" width="72" height="62" rx="8" fill="#3a404c"/><rect x="22" y="28" width="56" height="22" fill="#141820"/>
+      <circle cx="36" cy="40" r="6" fill="#cc3640"/><circle cx="64" cy="40" r="6" fill="#cc3640"/><circle cx="36" cy="40" r="2" fill="#000"/><circle cx="64" cy="40" r="2" fill="#000"/>
+      <circle cx="28" cy="70" r="5" fill="#fff6c8"/><circle cx="72" cy="70" r="5" fill="#fff6c8"/><path d="M40 62 L60 62 L58 76 L42 76 Z" fill="#0a0a10"/>${[44, 50, 56].map((x) => `<path d="M${x} 62 l1 5 l1 -5" fill="#e9e2cf"/>`).join("")}
+      <path d="M0 92 L100 92" stroke="#5a6170" stroke-width="3"/><path d="M14 82 L8 92 M86 82 L92 92" stroke="#3a404c" stroke-width="4"/>`,
+    u_fox: `<path d="M14 100 C16 76 32 64 50 64 C68 64 84 76 86 100 Z" fill="#1d1a24"/><path d="M40 64 L50 80 L60 64" fill="#cc3640"/>
+      <path d="M30 26 L24 6 L40 20 Z M70 26 L76 6 L60 20 Z" fill="#f1ead8"/><path d="M28 24 C28 50 40 62 50 64 C60 62 72 50 72 24 C64 18 36 18 28 24 Z" fill="#f1ead8"/>
+      <path d="M34 36 L44 40 L34 42 Z M66 36 L56 40 L66 42 Z" fill="#cc3640"/><path d="M46 52 L50 56 L54 52" stroke="#1c1a22" stroke-width="1.5" fill="none"/>
+      <path d="M32 30 Q40 28 44 34 M68 30 Q60 28 56 34" stroke="#cc3640" stroke-width="1.5" fill="none"/>
+      <path d="M78 64 C86 52 84 40 90 34 C92 44 96 50 90 62 Z" fill="#6fb2ff" opacity=".8"/><path d="M82 62 C86 54 86 48 90 44 C90 52 92 56 88 62 Z" fill="#dff0ff"/>`,
+    u_sim: `<path d="M14 100 C16 74 32 62 50 62 C68 62 84 74 86 100 Z" fill="#2c2f3a"/><path d="M28 40 C26 22 38 12 50 12 C62 12 74 22 72 40 C72 54 62 62 50 62 C38 62 28 54 28 40 Z" fill="#1d1f28"/>
+      <ellipse cx="50" cy="42" rx="14" ry="16" fill="#c9a98a"/><rect x="34" y="36" width="32" height="8" fill="#111"/><path d="M42 54 L58 54" stroke="#6a4a3a" stroke-width="1.5"/>
+      <path d="M70 80 L92 58" stroke="#c9ccd8" stroke-width="3"/><path d="M68 82 L74 76" stroke="#5b3e22" stroke-width="5"/>`,
+  });
+  CURSE_ART.c_kaihen_s = CURSE_ART.c_kaihen;
 })(typeof window !== "undefined" ? window : globalThis);

@@ -1,5 +1,5 @@
 /* Chạy: node tests/engine.test.js  — unit test công thức + chơi thử tự động toàn bộ Arc 1 */
-require("../js/data.js"); require("../js/world.js"); require("../js/gear.js"); require("../js/domain.js"); require("../js/story.js"); require("../js/story2.js"); require("../js/engine.js");
+require("../js/data.js"); require("../js/world.js"); require("../js/gear.js"); require("../js/domain.js"); require("../js/story.js"); require("../js/story2.js"); require("../js/arc456.js"); require("../js/engine.js");
 const CD = globalThis.CD;
 let pass = 0, fail = 0, D2;
 const eq = (name, a, b) => { if (JSON.stringify(a) === JSON.stringify(b)) pass++; else { fail++; console.log("FAIL", name, "→", a, "≠", b); } };
@@ -203,7 +203,9 @@ function playthrough(seed, prefer) {
     } else break;
     CD.enterScene(s, id);
     const errs = CD.validate(s); if (errs.length) { fail++; console.log("VALIDATE", seed, id, errs); break; }
-    if (id === "a3_end") break;
+    if (id === "a6_end") break;
+    if (id === "a3_end") log.lvA3 = s.level, log.rankA3 = s.rank;
+    if (id === "a5_end" || id === "a5_skip") log.lvA5 = s.level;
     if (id === "a1_end") log.lvA1 = s.level, log.rankA1 = s.rank;
     if (id === "a3_start") log.lvA2 = s.level;
   }
@@ -211,10 +213,11 @@ function playthrough(seed, prefer) {
 }
 const results = [];
 for (let seed = 1; seed <= 120; seed++) results.push(playthrough(seed, seed % 2 ? "first" : "rand"));
-eq("120 lượt chơi đều tới cuối Arc 3", results.filter((r) => r.id === "a3_end").length, 120);
+eq("120 lượt chơi đều tới cuối Arc 6", results.filter((r) => r.id === "a6_end").length, 120);
 const stat = (f) => { const v = results.map(f); return Math.min(...v) + "–" + Math.max(...v); };
-console.log("Lv cuối Arc 1:", stat((r) => r.log.lvA1), "· cuối Arc 2:", stat((r) => r.log.lvA2), "· cuối Arc 3:", stat((r) => r.s.level));
-console.log("Rank D cuối Arc 1:", results.filter((r) => r.log.rankA1 === "D").length + "/120 · Rank C cuối Arc 3:", results.filter((r) => r.s.rank === "C").length + "/120");
+console.log("Lv cuối Arc 1:", stat((r) => r.log.lvA1), "· Arc 2:", stat((r) => r.log.lvA2), "· Arc 3:", stat((r) => r.log.lvA3), "· Arc 5:", stat((r) => r.log.lvA5), "· Arc 6:", stat((r) => r.s.level));
+console.log("Rank D cuối Arc 1:", results.filter((r) => r.log.rankA1 === "D").length + "/120 · Rank C cuối Arc 3:", results.filter((r) => r.log.rankA3 === "C").length + "/120 · Rank B cuối Arc 6:", results.filter((r) => r.s.rank === "B").length + "/120");
+const fateCount = {}; results.forEach((r) => Object.entries(r.s.fates).forEach(([k, v]) => { const key = k + ":" + v; fateCount[key] = (fateCount[key] || 0) + 1; })); console.log("Số phận:", fateCount);
 const losses = {}; results.forEach((r) => r.log.fights.filter((f) => f.includes(":lose")).forEach((f) => { const k = f.split(":lose")[0]; losses[k] = (losses[k] || 0) + 1; }));
 console.log("Số trận thua theo cảnh:", losses);
 console.log("Mẫu trận seed 2:", results[1].log.fights.join(" ").slice(0, 600)); const techs = {}; results.forEach((r) => (techs[r.s.technique] = (techs[r.s.technique] || 0) + 1)); console.log("Thuật thức:", techs);

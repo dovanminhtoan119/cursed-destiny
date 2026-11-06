@@ -348,6 +348,12 @@
     const tier = CD.moralTier(S.moral), st = { active: "Đang làm", done: "Hoàn thành", failed: "Thất bại" };
     let h = `<section class="panel"><p class="label">Nhiệm vụ</p>${Object.entries(S.quests).map(([id, s]) =>
       `<div class="quest ${s}"><div><strong>${esc(D.QUESTS[id].name)}</strong><div class="muted">${esc(D.QUESTS[id].desc)}</div></div><em>${st[s]}</em></div>`).reverse().join("") || `<p class="muted">Chưa có nhiệm vụ.</p>`}</section>`;
+    const fateIds = Array.from(new Set((D.FATE_WATCH || []).filter((k) => S.fates[k]).concat(Object.keys(S.fates))));
+    h += `<section class="panel"><p class="label">Số phận</p>${fateIds.length ? fateIds.map((k) => {
+      const f = S.fates[k], canon = (D.FATE_CANON || {})[k], changed = canon && f && f !== canon;
+      return `<div class="relrow fate ${changed ? "changed" : ""}"><div class="cpt sm">${CD.ART.portrait(k)}</div><div class="fbody"><div class="npc-h"><strong>${esc(nameOf(k))}</strong><em class="tier">${esc(CD.FATE_LABEL[f] || f)}</em></div>
+        <div class="mini">${canon ? "Nguyên tác: " + esc(CD.FATE_LABEL[canon]) : ""}${changed ? " · <b>Đã thay đổi nhờ Shen</b>" : canon ? " · Trùng nguyên tác" : ""}</div></div></div>`;
+    }).join("") : `<p class="muted">Chưa có số phận nào được định đoạt.</p>`}<p class="muted">Những lựa chọn và mức độ gắn bó của Shen có thể thay đổi kết cục của một số nhân vật.</p></section>`;
     h += `<section class="panel"><p class="label">Thiện–Ác · ${esc(tier.name)}</p>
       <div class="moral">${CD.MORAL_TIERS.map((t) => `<span class="${t.id === tier.id ? "on" : ""}">${esc(t.name)}</span>`).join("")}</div>
       <p class="muted">Điểm: ${S.moral} · ${esc(tier.perk)}${Object.keys(tier.bonus).length ? " · Thưởng: " + statLine(tier.bonus) : ""}</p>
